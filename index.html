@@ -110,7 +110,7 @@
     background: linear-gradient(180deg, #020604 0%, #020604 100%);
     padding: 10px 16px 10px 16px;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 24px;
     position: relative;
@@ -129,7 +129,7 @@
   @keyframes blink { 50% { opacity: 0; } }
 
   .title-wrap {
-    text-align: center;
+    text-align: left;
     font-family: var(--mono);
     font-weight: 800;
     font-size: 22px;
@@ -1126,6 +1126,27 @@
   .term-out.err { color: var(--red); }
   .term-out.dim { color: var(--dim); }
   .term-out.acc { color: var(--amber); }
+  .term-row {
+    display: grid;
+    grid-template-columns: 18ch 1fr;
+    gap: 14px;
+    align-items: baseline;
+    padding-left: 4px;
+    line-height: 1.5;
+  }
+  .term-row-cmd {
+    color: var(--grn-0);
+    font-weight: 700;
+    text-shadow: 0 0 6px rgba(0,255,102,0.35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .term-row-desc {
+    color: var(--txt);
+    min-width: 0;
+    word-break: break-word;
+  }
   .term-input-row {
     display: flex;
     align-items: center;
@@ -1152,7 +1173,6 @@
   .term-cursor {
     color: var(--grn-0);
     animation: blink 1s steps(1) infinite;
-    margin-left: -3px;
   }
   .terminal.collapsed .term-body { display: none; }
 
@@ -1795,6 +1815,19 @@
     margin: 6px 0 8px 0;
     letter-spacing: 0.04em;
   }
+  .cyber-popup .cls-tag {
+    background: var(--red);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    padding: 3px 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--red);
+    box-shadow: 0 0 12px rgba(255,51,85,0.4);
+    display: inline-block;
+  }
   .cyber-popup .open-btn {
     display: block;
     width: 100%;
@@ -1865,16 +1898,75 @@
   }
 
   @media (max-width: 980px) {
-    .main { grid-template-columns: 1fr; }
-    .leftrail { border-right: none; border-bottom: 1px dashed var(--line-2); max-height: 40vh; }
+    /* allow vertical scroll on small screens */
+    html, body { height: auto; }
+    body { overflow: auto; }
+    .shell {
+      position: relative;
+      inset: auto;
+      height: auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    body::before { z-index: 0; }
+    body::after { z-index: 0; }
+
+    /* topbar tighter */
+    .topbar { padding: 8px 12px; gap: 12px; }
+    .title-wrap { font-size: 14px; letter-spacing: 0.22em; }
+    .top-meta { font-size: 9.5px; gap: 10px; }
+
+    /* main becomes a flex column; terminal moves below carousel */
+    .main {
+      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
+    }
+    .leftrail.terminal-rail {
+      order: 2;
+      border-right: none;
+      border-top: 1px dashed var(--line-2);
+      max-height: none;
+      padding: 12px;
+    }
+    .leftrail.terminal-rail .panel-head { margin-bottom: 8px; }
+    .terminal.fullrail { min-height: 220px; }
+    .terminal.fullrail .term-body { min-height: 160px; max-height: 360px; }
+    .stage { order: 1; }
+
+    /* re-order stage children: search first, controls under, then carousel */
+    .stage { display: flex; flex-direction: column; }
+    .stage > .search-strip { order: 1; padding: 10px 12px; gap: 8px; grid-template-columns: 1fr; border-bottom: 1px dashed var(--line); }
+    .stage > .stage-head   { order: 2; padding: 8px 12px 6px 12px; }
+    .stage > .carousel-wrap{ order: 3; padding: 8px 8px 14px 8px; }
+    .stage > .pager        { order: 4; }
+
+    /* compact search strip on mobile */
+    .search-strip .strip-chips { justify-content: flex-start; gap: 3px; }
+    .search-strip .chip { padding: 2px 6px; font-size: 9.5px; }
+    .search-strip .match-pill { font-size: 9.5px; padding: 3px 8px; }
+    .search-strip .input-wrap { padding: 5px 8px; }
+
+    /* breadcrumbs are noisy on phones — show just stage controls */
+    .breadcrumbs { display: none; }
+    .stage-head { grid-template-columns: 1fr; }
+    .stage-controls { justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+
+    /* carousel + cards sized down */
+    .carousel-arrow { width: 36px; height: 56px; }
+    .card { width: 220px; }
+
+    /* modals + forms wrap to single column */
     .modal-body { grid-template-columns: 1fr; }
     .form-grid { grid-template-columns: 1fr; }
     .form-rows { grid-template-columns: 1fr; }
-    .stage-head { grid-template-columns: 1fr; }
-    .stage-controls { justify-content: flex-start; }
-    .carousel-wrap { padding: 4px 12px 14px 12px; }
-    .carousel-arrow { width: 36px; height: 56px; }
-    .card { width: 220px; }
+    .contact-row { grid-template-columns: 110px 1fr 32px; }
+    .rel-row { grid-template-columns: 110px 1fr 32px; }
+    .rel-row > .input-wrap:nth-child(3) { grid-column: 1 / -1; }
+
+    /* statusbar — wrap small */
+    .statusbar { flex-direction: column; align-items: flex-start; font-size: 9.5px; gap: 4px; padding: 8px 12px; }
   }
 </style>
 </head>
@@ -3200,6 +3292,7 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
       const popupHtml =
         '<div class="cyber-popup">' +
           '<span class="id">' + escapeHTML(p.profile.id || "") + '</span>' +
+          (p.profile.classified ? '<div class="cls-tag">▮ CLASSIFIED</div>' : '') +
           '<div class="nm">' + escapeHTML((p.profile.firstName || "") + " " + (p.profile.lastName || "")) + '</div>' +
           '<div class="row"><span class="k">DOB</span><span class="v">' + escapeHTML(fmtDate(p.profile.dob)) + '</span></div>' +
           '<div class="row"><span class="k">ETHN</span><span class="v">' + escapeHTML(p.profile.ethnicity || "—") + '</span></div>' +
@@ -3580,6 +3673,14 @@ function Terminal({ runCommand, banner, fullrail }) {
                 <div className="term-cmd"><span className="term-pfx">{PROMPT}</span> {h.cmd}</div>
               )}
               {h.lines.map((l, j) => {
+                if (l && typeof l === "object" && l.kind === "cmd-row") {
+                  return (
+                    <div key={j} className="term-row">
+                      <span className="term-row-cmd">{l.cmd}</span>
+                      <span className="term-row-desc">{l.desc}</span>
+                    </div>
+                  );
+                }
                 const text = typeof l === "string" ? l : l.text;
                 const kind = typeof l === "string" ? "out" : (l.kind || "out");
                 return <div key={j} className={"term-out " + (kind === "out" ? "" : kind)}>{text}</div>;
@@ -3590,6 +3691,7 @@ function Terminal({ runCommand, banner, fullrail }) {
       )}
       <form className="term-input-row" onSubmit={submit}>
         <span className="term-pfx">{PROMPT}</span>
+        {!value && <span className="term-cursor">▌</span>}
         <input
           ref={inputRef}
           className="term-input"
@@ -3600,7 +3702,6 @@ function Terminal({ runCommand, banner, fullrail }) {
           spellCheck={false}
           placeholder={"try 'help'"}
         />
-        <span className="term-cursor">▌</span>
       </form>
     </div>
   );
@@ -3618,11 +3719,6 @@ function TopBar({ count }) {
   const ts = time.toISOString().slice(0, 19).replace("T", " ");
   return (
     <header className="topbar">
-      <div className="brand">
-        <span className="prompt">root@persona</span>
-        <span className="dim">:~ #</span>
-        <span className="blink">█</span>
-      </div>
       <div className="title-wrap">
         <Glitch>PERSONA_DB // v0.1.7</Glitch>
       </div>
@@ -3769,24 +3865,25 @@ function App() {
           "  · EDIT to amend a record :: DELETE to remove :: + NEW for a new entry",
           "  · MAP opens a Leaflet/OSM world view (pins via Nominatim geocoding)",
           "  · click any address in a record to fly the map to that pin",
-          "  · search bar on the left filters which cards appear in the carousel",
+          "  · search bar above the carousel filters which cards are visible",
           "",
           "COMMANDS:",
-          "  help                  this screen",
-          "  count                 total + filtered counts",
-          "  find <query>          set the carousel filter",
-          "  clear-filter / reset  remove the filter",
-          "  scope <field>         set filter scope (all|firstname|lastname|dob|...)",
-          "  goto <n|id|name>      jump carousel to entry",
-          "  open <n|id|name>      open a record",
-          "  list / ls             list all profiles",
-          "  map                   open the world map",
-          "  new                   create a new entry",
-          "  link                  pick the profile-image folder",
-          "  whoami                prints current shell user",
-          "  date                  current UTC timestamp",
-          "  clear                 clear the terminal scrollback",
-          "  version               prints version"
+          { kind: "cmd-row", cmd: "help",         desc: "this screen" },
+          { kind: "cmd-row", cmd: "count",        desc: "total + filtered counts" },
+          { kind: "cmd-row", cmd: "find <query>", desc: "set the carousel filter" },
+          { kind: "cmd-row", cmd: "clear-filter", desc: "remove the filter (alias: reset)" },
+          { kind: "cmd-row", cmd: "scope <field>",desc: "set filter scope (all|firstname|lastname|dob|...)" },
+          { kind: "cmd-row", cmd: "goto <n|id|name>", desc: "jump carousel to entry" },
+          { kind: "cmd-row", cmd: "open <n|id|name>", desc: "open a record" },
+          { kind: "cmd-row", cmd: "list",         desc: "list all profiles (alias: ls)" },
+          { kind: "cmd-row", cmd: "map",          desc: "open the world map" },
+          { kind: "cmd-row", cmd: "new",          desc: "create a new entry" },
+          { kind: "cmd-row", cmd: "link",         desc: "pick the profile-image folder" },
+          { kind: "cmd-row", cmd: "whoami",       desc: "prints current shell user" },
+          { kind: "cmd-row", cmd: "date",         desc: "current UTC timestamp" },
+          { kind: "cmd-row", cmd: "echo <text>",  desc: "prints the argument" },
+          { kind: "cmd-row", cmd: "clear",        desc: "clear the terminal scrollback" },
+          { kind: "cmd-row", cmd: "version",      desc: "prints version" }
         ];
       case "clear":
       case "cls":
