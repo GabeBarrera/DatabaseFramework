@@ -1196,8 +1196,8 @@
   .map-overlay-tl {
     position: absolute;
     top: 12px; left: 12px;
-    background: rgba(2,8,5,0.85);
-    border: 1px solid var(--line-2);
+    background: rgba(2,8,5,0.92);
+    border: 1px solid var(--grn-3);
     padding: 8px 10px;
     color: var(--grn-1);
     font-size: 10.5px;
@@ -1206,7 +1206,7 @@
     display: grid;
     gap: 4px;
     pointer-events: none;
-    z-index: 2;
+    z-index: 1000;
   }
   .map-overlay-tl b { color: var(--grn-0); font-weight: 600; }
 
@@ -1216,7 +1216,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    z-index: 3;
+    z-index: 1000;
   }
   .map-zoom button {
     width: 36px; height: 36px;
@@ -1246,11 +1246,12 @@
     position: absolute;
     top: 12px; right: 12px;
     bottom: 12px;
-    width: 240px;
-    background: rgba(2,8,5,0.88);
-    border: 1px solid var(--line-2);
+    width: 260px;
+    background: rgba(2,8,5,0.94);
+    border: 1px solid var(--grn-3);
+    box-shadow: 0 0 24px rgba(0,0,0,0.5);
     padding: 10px 0 0 0;
-    z-index: 3;
+    z-index: 1000;
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
@@ -1320,29 +1321,9 @@
     height: 100%;
     outline: none;
   }
-  /* Tile recoloring: dark base + green tint via filters */
-  .cyber-tiles {
-    filter:
-      grayscale(1)
-      invert(1)
-      brightness(0.9)
-      contrast(1.0)
-      sepia(0.6)
-      hue-rotate(60deg)
-      saturate(2.2);
-  }
-  .leaflet-tile-pane { opacity: 0.95; }
-  /* subtle scanline + green vignette over the map */
-  .leaflet-container::after {
-    content: "";
-    position: absolute; inset: 0;
-    pointer-events: none;
-    background:
-      repeating-linear-gradient(to bottom, rgba(0,255,102,0.04) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse 80% 70% at 50% 50%, transparent 55%, rgba(0,20,8,0.55) 100%);
-    z-index: 700;
-    mix-blend-mode: screen;
-  }
+  /* Tiles are already dark — no extra tint, no green overlay */
+  .cyber-tiles { filter: none; }
+  .leaflet-tile-pane { opacity: 1; }
   /* attribution panel */
   .leaflet-control-attribution {
     background: rgba(2,8,5,0.88) !important;
@@ -1420,6 +1401,37 @@
     transform: translate(-50%, -50%);
     border-radius: 50%;
     cursor: pointer;
+  }
+  /* Active selection: bracketed green square outline around the pin */
+  .cyber-pin .square {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 40px; height: 40px;
+    transform: translate(-50%, -50%);
+    border: 1.5px solid var(--grn-0);
+    box-shadow:
+      0 0 14px rgba(0,255,102,0.5),
+      inset 0 0 8px rgba(0,255,102,0.15);
+    pointer-events: none;
+    animation: cross-square-pulse 1.6s ease-in-out infinite;
+  }
+  /* corner brackets riding on top of the square edges */
+  .cyber-pin .square::before,
+  .cyber-pin .square::after {
+    content: "";
+    position: absolute;
+    width: 8px; height: 8px;
+    border: 2px solid var(--grn-0);
+  }
+  .cyber-pin .square::before { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+  .cyber-pin .square::after  { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+  @keyframes cross-square-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    50%      { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
+  }
+  /* Crosshair lat/lng polylines */
+  .leaflet-overlay-pane path.cross-line {
+    filter: drop-shadow(0 0 5px rgba(0,255,102,0.55));
   }
 
   /* Popups */
@@ -1510,18 +1522,25 @@
   /* Hide default Leaflet zoom control (we provide our own) */
   .leaflet-control-zoom { display: none !important; }
 
+  .ctrl-btn.map-btn {
+    min-width: 36px;
+    padding: 6px 10px;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+  }
+
   /* loading veil while Nominatim geocodes */
   .geo-veil {
     position: absolute;
     bottom: 16px; left: 16px;
-    background: rgba(2,8,5,0.92);
+    background: rgba(2,8,5,0.94);
     border: 1px solid var(--grn-3);
     color: var(--grn-0);
     padding: 8px 12px;
     font-size: 10.5px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    z-index: 700;
+    z-index: 1000;
     box-shadow: 0 0 18px rgba(0,255,102,0.2);
     display: grid;
     gap: 4px;
@@ -1545,7 +1564,6 @@
   }
 
   @media (max-width: 980px) {
-    .map-list { display: none; }
     .contact-row { grid-template-columns: 110px 1fr 32px; }
   }
 
@@ -2536,11 +2554,13 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({}); // id -> L.marker
+  const userLocRef = useRef(null); // [lat, lng] when geolocation succeeds
   const [active, setActive] = useState(focusId || null);
   const [pins, setPins] = useState([]); // [{profile, lat, lng, display}]
   const [progress, setProgress] = useState({ done: 0, total: 0, status: "idle" });
   const [unresolved, setUnresolved] = useState([]); // profiles whose addresses returned no hit
   const [zoom, setZoom] = useState(2);
+  const [locStatus, setLocStatus] = useState("pending"); // pending|granted|denied|unavailable
 
   // ESC to close
   useEffect(() => {
@@ -2562,6 +2582,9 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
       wheelDebounceTime: 30
     }).setView([20, 0], 2);
 
+    // strip the "🇺🇦 Leaflet" prefix from attribution
+    if (m.attributionControl) m.attributionControl.setPrefix(false);
+
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> ' +
@@ -2577,6 +2600,23 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
 
     // ensure proper sizing after the modal animates in
     setTimeout(() => m.invalidateSize(), 80);
+
+    // start on the user's current location, if they permit
+    if (navigator.geolocation) {
+      setLocStatus("pending");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const ll = [pos.coords.latitude, pos.coords.longitude];
+          userLocRef.current = ll;
+          try { m.setView(ll, 9, { animate: true }); } catch (e) {}
+          setLocStatus("granted");
+        },
+        () => { setLocStatus("denied"); },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+      );
+    } else {
+      setLocStatus("unavailable");
+    }
 
     return () => { try { m.remove(); } catch (e) {} mapRef.current = null; };
   }, []);
@@ -2642,6 +2682,7 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
       const label = (p.profile.firstName || "") + " " + (p.profile.lastName ? p.profile.lastName.charAt(0) + "." : "");
       const html =
         '<div class="hit"></div>' +
+        (isActive ? '<div class="square"></div>' : '') +
         '<div class="ping"></div>' +
         '<div class="ring2"></div>' +
         '<div class="ring"></div>' +
@@ -2683,14 +2724,52 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
       markersRef.current[p.profile.id] = marker;
     });
 
-    // if there are pins and we're still at the world view, fit them
-    if (pins.length > 0 && m.getZoom() <= 2 && !focusId) {
+    // auto-fit to pins only when we haven't locked onto user location or a focus pin
+    if (pins.length > 0 && !focusId && locStatus !== "granted" && m.getZoom() <= 2) {
       try {
         const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
         m.fitBounds(bounds, { padding: [60, 60], maxZoom: 5, animate: true });
       } catch (e) {}
     }
   }, [pins, active]);
+
+  // crosshair: green lat/lng lines through the active pin
+  const crosshairRef = useRef(null);
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m) return;
+    // tear down any existing crosshair
+    if (crosshairRef.current) {
+      try { crosshairRef.current.remove(); } catch (e) {}
+      crosshairRef.current = null;
+    }
+    if (!active) return;
+    const pin = pins.find((x) => x.profile.id === active);
+    if (!pin) return;
+    const group = L.layerGroup();
+    // horizontal — latitude
+    L.polyline([[pin.lat, -540], [pin.lat, 540]], {
+      color: "#00ff66",
+      weight: 1.2,
+      opacity: 0.95,
+      dashArray: "4 6",
+      interactive: false,
+      noClip: true,
+      className: "cross-line cross-lat"
+    }).addTo(group);
+    // vertical — longitude
+    L.polyline([[-85, pin.lng], [85, pin.lng]], {
+      color: "#00ff66",
+      weight: 1.2,
+      opacity: 0.95,
+      dashArray: "4 6",
+      interactive: false,
+      noClip: true,
+      className: "cross-line cross-lng"
+    }).addTo(group);
+    group.addTo(m);
+    crosshairRef.current = group;
+  }, [active, pins]);
 
   // fly to focus when focusId changes
   useEffect(() => {
@@ -2748,6 +2827,7 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
           <div className="map-overlay-tl">
             <div>// SRC: <b>OpenStreetMap / CARTO</b></div>
             <div>// GEO: <b>Nominatim</b></div>
+            <div>// LOC: <b>{locStatus === "pending" ? "requesting…" : locStatus === "granted" ? "current location" : locStatus === "denied" ? "denied" : "n/a"}</b></div>
             <div>// ZOOM: <b>{zoom.toFixed(2)}</b></div>
             <div>// PIN_LOCK: <b>{active || "—"}</b></div>
           </div>
@@ -2805,14 +2885,6 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
             </div>
           </div>
 
-          {/* zoom controls */}
-          <div className="map-zoom">
-            <button onClick={zoomIn} title="zoom in">+</button>
-            <div className="level">{zoom.toFixed(1)}x</div>
-            <button onClick={zoomOut} title="zoom out">−</button>
-            <button className="reset" onClick={fit} title="fit pins">FIT</button>
-          </div>
-
           {/* progress veil */}
           {progress.status === "geocoding" && (
             <div className="geo-veil">
@@ -2831,6 +2903,19 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
             <span className="kbd">2x</span> open record
           </div>
           <div className="foot-actions">
+            <button className="ctrl-btn map-btn" onClick={zoomIn} title="zoom in">+</button>
+            <button className="ctrl-btn map-btn" onClick={zoomOut} title="zoom out">−</button>
+            <button
+              className="ctrl-btn map-btn"
+              onClick={() => {
+                const m = mapRef.current;
+                if (!m || !userLocRef.current) return;
+                m.flyTo(userLocRef.current, 11, { duration: 0.7 });
+              }}
+              disabled={!userLocRef.current}
+              style={{ opacity: userLocRef.current ? 1 : 0.4 }}
+              title="my location"
+            >ME</button>
             <button className="ctrl-btn" onClick={fit}>↺ FIT</button>
             <button
               className="ctrl-btn primary"
