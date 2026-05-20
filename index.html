@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>// PERSONA_DB ::  ROOT_TERMINAL</title>
+<title>//PERSONA_DB</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2881,7 +2881,40 @@ function NewEntryModal({ onClose, onSave, initial }) {
     hidden: initial ? !!initial.hidden : false,
     classified: initial ? !!initial.classified : false
   });
+  const [importErr, setImportErr] = useState(null);
+  const importRef = useRef(null);
   const toggleFlag = (k) => setFlags((f) => ({ ...f, [k]: !f[k] }));
+
+  const handleImport = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        setForm({
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          dob: data.dob || "",
+          ethnicity: data.ethnicity || "",
+          sex: data.sex || "",
+          address: data.address || "",
+          description: data.description || "",
+          image: data.image || ""
+        });
+        if (data.imageData) setImgPreview(data.imageData);
+        if (Array.isArray(data.contacts)) setContacts(data.contacts.map((c) => ({ ...c })));
+        if (Array.isArray(data.relationships)) setRelationships(data.relationships.map((r) => ({ ...r })));
+        setFlags({ poi: !!data.poi, hidden: !!data.hidden, classified: !!data.classified });
+        setErrors({});
+        setImportErr(null);
+      } catch (_) {
+        setImportErr("invalid json");
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
 
   const addContact = () => setContacts((c) => [...c, { type: "email", value: "" }]);
   const updateContact = (i, patch) => setContacts((c) => c.map((row, k) => k === i ? { ...row, ...patch } : row));
@@ -2957,7 +2990,12 @@ function NewEntryModal({ onClose, onSave, initial }) {
         <div className="modal-head">
           <div className="tag">{editing ? "EDIT" : "CREATE"}</div>
           <h3>&gt; <Glitch className="glitch-sm">{editing ? `PATCH_ENTRY :: ${initial.id}` : "NEW_ENTRY.appendix()"}</Glitch></h3>
-          <button className="ctrl-btn" onClick={onClose}>✕ ESC</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {importErr && <span style={{ color: "var(--red)", fontSize: 10.5, letterSpacing: "0.16em", textTransform: "uppercase" }}>[ {importErr} ]</span>}
+            <input ref={importRef} type="file" accept=".json,application/json" onChange={handleImport} style={{ display: "none" }} />
+            <button className="ctrl-btn" onClick={() => importRef.current && importRef.current.click()} title="populate fields from a .json file">⇪ IMPORT</button>
+            <button className="ctrl-btn" onClick={onClose}>✕ ESC</button>
+          </div>
         </div>
 
         <div className="form-grid">
@@ -3752,7 +3790,7 @@ function TopBar({ count }) {
   return (
     <header className="topbar">
       <div className="title-wrap">
-        <Glitch>PERSONA_DB // v0.1.7</Glitch>
+        <Glitch>PERSONA_DB // v0.1.1</Glitch>
       </div>
       <div className="top-meta">
         <span><span className="dot" /> LINK_OK</span>
@@ -3888,7 +3926,7 @@ function App() {
       case "help":
       case "?":
         return [
-          { kind: "acc", text: "PERSONA_DB v0.1.7 — fictional persona database (cyberpunk roleplay)." },
+          { kind: "acc", text: "PERSONA_DB v0.1.1 — fictional persona database (cyberpunk roleplay)." },
           "",
           "WHAT THIS DOES:",
           "  · stores fictional profiles: name, DOB, ethnicity, sex, address, contacts, notes",
@@ -3987,7 +4025,7 @@ function App() {
         return new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
       case "version":
       case "ver":
-        return "PERSONA_DB v0.1.7";
+        return "PERSONA_DB v0.1.1";
       case "classified": {
         const arg = (args || "").toLowerCase();
         if (arg !== "enable" && arg !== "disable" && arg !== "on" && arg !== "off") {
