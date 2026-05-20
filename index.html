@@ -4682,9 +4682,45 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
 // ============================================================
 const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
 
+const REL_REVERSE = {
+  "mother": "child",     "father": "child",       "parent": "child",
+  "child": "parent",     "son": "parent",          "daughter": "parent",
+  "brother": "sibling",  "sister": "sibling",      "sibling": "sibling",
+  "spouse": "spouse",    "partner": "spouse",       "ex": "ex",
+  "aunt": "relative",    "uncle": "relative",
+  "nephew": "relative",  "niece": "relative",      "cousin": "cousin",
+  "grandparent": "grandchild",                      "grandchild": "grandparent",
+  "friend": "friend",    "best friend": "best friend",
+  "coworker": "coworker","colleague": "colleague",
+  "boss": "subordinate", "subordinate": "boss",
+  "neighbor": "neighbor","associate": "associate",
+  "contact": "contact",  "rival": "rival",          "other": "other",
+  "mentor": "mentee",    "mentee": "mentor",
+};
+
+const FIELD_ALIASES = {
+  "first name": "firstName", "firstname": "firstName", "first": "firstName",
+  "last name":  "lastName",  "lastname":  "lastName",  "last":  "lastName",
+  "dob": "dob", "date of birth": "dob", "birthday": "dob", "birthdate": "dob", "birth date": "dob",
+  "ethnicity": "ethnicity", "race": "ethnicity", "background": "ethnicity", "nationality": "ethnicity",
+  "sex": "sex", "gender": "sex",
+  "address": "address", "location": "address", "home": "address",
+  "description": "description", "notes": "description", "bio": "description", "about": "description", "info": "description",
+};
+
 function interpretChat(query, profiles) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
+
+  const findProfile = (nameStr) => {
+    const n = nameStr.toLowerCase().trim();
+    return profiles.find((p) =>
+      `${p.firstName} ${p.lastName}`.toLowerCase() === n ||
+      p.firstName.toLowerCase() === n ||
+      p.lastName.toLowerCase() === n ||
+      (p.id || "").toLowerCase() === n
+    );
+  };
 
   const fmt = (ps, label) => {
     if (!ps.length) return [{ kind: "dim", text: `> no results :: ${label}` }];
@@ -4701,7 +4737,9 @@ function interpretChat(query, profiles) {
   // HELP
   if (/^help/.test(q))
     return { lines: [
-      { kind: "acc", text: "chat mode — ask questions about your data:" },
+      { kind: "acc", text: "chat mode — query and edit your data in plain english:" },
+      "",
+      "QUERIES:",
       "  how many profiles are there",
       "  who has a birthday in [month]",
       "  who was born in [year]",
@@ -4714,6 +4752,16 @@ function interpretChat(query, profiles) {
       "  who is related to [name]",
       "  tell me about [name]",
       "  find people who [keyword]",
+      "",
+      "MUTATIONS:",
+      "  [name] is [name]'s [relation]    — e.g. josh is kevin's parent",
+      "  [name] is [a/the] [rel] of [name]— e.g. josh is the parent of kevin",
+      "  [name] and [name] are [rel]s     — e.g. josh and kevin are friends",
+      "  link [name] and [name] as [rel]  — e.g. link josh and kevin as rivals",
+      "  set [name]'s [field] to [value]  — e.g. set josh's description to ...",
+      "  update [field] for [name] to [value]",
+      "  [name]'s [field] is now [value]",
+      "",
       "  exit — return to shell",
     ]};
 
@@ -4826,6 +4874,77 @@ function interpretChat(query, profiles) {
     const res = profiles.filter((p) => p.address && p.address.toLowerCase().includes(place));
     if (res.length) return { lines: fmt(res, `in "${place}"`) };
   }
+
+  // FIELD UPDATE
+  const QUESTION_WORDS = /^(who|what|which|where|when|how|is|are|do|does|did|will|would|can|could|should)$/;
+  const applyFieldUpdate = (nameRaw, fieldRaw, value) => {
+    const fieldKey = FIELD_ALIASES[fieldRaw.trim().toLowerCase()];
+    if (!fieldKey) return { lines: [{ kind: "err", text: `> unknown field :: "${fieldRaw.trim()}" — valid: firstName, lastName, dob, sex, ethnicity, address, description` }] };
+    const p = findProfile(nameRaw.trim());
+    if (!p) return { lines: [{ kind: "err", text: `> profile not found :: "${nameRaw.trim()}"` }] };
+    const updated = { ...p, [fieldKey]: value.trim() };
+    return {
+      lines: [
+        { kind: "acc", text: `> updated :: ${p.firstName} ${p.lastName}  [${p.id}]` },
+        `  ${fieldKey} → "${value.trim()}"`,
+      ],
+      newProfiles: profiles.map((x) => x.id === p.id ? updated : x),
+    };
+  };
+  // set/update/change [name]'s [field] to [value]
+  { const m = q.match(/^(?:set|update|change)\s+(.+?)'s\s+(.+?)\s+to\s+(.+)$/);
+    if (m) return applyFieldUpdate(m[1], m[2], m[3]); }
+  // set/update/change [field] for [name] to [value]
+  { const m = q.match(/^(?:set|update|change)\s+(.+?)\s+for\s+(.+?)\s+to\s+(.+)$/);
+    if (m && FIELD_ALIASES[m[1].trim().toLowerCase()]) return applyFieldUpdate(m[2], m[1], m[3]); }
+  // [name]'s [field] is now [value]
+  { const m = q.match(/^(.+?)'s\s+(.+?)\s+is\s+now\s+(.+)$/);
+    if (m && !QUESTION_WORDS.test(m[1].trim().toLowerCase())) return applyFieldUpdate(m[1], m[2], m[3]); }
+
+  // RELATIONSHIP LINK
+  const applyRelLink = (aName, bName, relTypeRaw) => {
+    if (QUESTION_WORDS.test(aName.trim().toLowerCase())) return null;
+    const profA = findProfile(aName.trim());
+    const profB = findProfile(bName.trim());
+    if (!profA && !profB) return { lines: [{ kind: "err", text: `> profiles not found :: "${aName.trim()}" and "${bName.trim()}"` }] };
+    if (!profA) return { lines: [{ kind: "err", text: `> profile not found :: "${aName.trim()}"` }] };
+    if (!profB) return { lines: [{ kind: "err", text: `> profile not found :: "${bName.trim()}"` }] };
+    const rel = relTypeRaw.trim().toLowerCase();
+    const reverse = REL_REVERSE[rel] !== undefined ? REL_REVERSE[rel] : rel;
+    const addLink = (p, link) => {
+      const rels = (p.relationships || []).filter((r) => r.refId !== link.refId);
+      return [...rels, link];
+    };
+    return {
+      lines: [
+        { kind: "acc", text: `> linked :: ${profA.firstName} ${profA.lastName}  ↔  ${profB.firstName} ${profB.lastName}` },
+        `  ${profA.firstName} ${profA.lastName} → ${rel} → ${profB.firstName} ${profB.lastName}`,
+        `  ${profB.firstName} ${profB.lastName} → ${reverse} → ${profA.firstName} ${profA.lastName}`,
+      ],
+      newProfiles: profiles.map((p) => {
+        if (p.id === profA.id) return { ...p, relationships: addLink(p, { type: rel,     name: `${profB.firstName} ${profB.lastName}`, refId: profB.id }) };
+        if (p.id === profB.id) return { ...p, relationships: addLink(p, { type: reverse, name: `${profA.firstName} ${profA.lastName}`, refId: profA.id }) };
+        return p;
+      }),
+    };
+  };
+  // [A] is [B]'s [relType]  — "Josh is Kevin's parent"
+  { const m = q.match(/^(.+?)\s+is\s+(.+?)'s\s+([\w ]+?)(?:\s*\?)?$/);
+    if (m) { const r = applyRelLink(m[1], m[2], m[3]); if (r) return r; } }
+  // [A] is [a/the] [relType] of [B]  — "Josh is the parent of Kevin"
+  { const m = q.match(/^(.+?)\s+is\s+(?:a\s+|the\s+)?([\w ]+?)\s+of\s+(.+?)(?:\s*\?)?$/);
+    if (m) { const r = applyRelLink(m[1], m[3], m[2]); if (r) return r; } }
+  // [A] and [B] are [relType]s  — "Josh and Kevin are friends"
+  { const m = q.match(/^(.+?)\s+and\s+(.+?)\s+are\s+([\w ]+?)s?(?:\s*\?)?$/);
+    if (m) {
+      let rel = m[3].trim();
+      if (!REL_REVERSE.hasOwnProperty(rel) && REL_REVERSE.hasOwnProperty(rel.replace(/s$/, ""))) rel = rel.replace(/s$/, "");
+      const r = applyRelLink(m[1], m[2], rel); if (r) return r;
+    }
+  }
+  // link [A] and [B] as [relType]  — "link Josh and Kevin as rivals"
+  { const m = q.match(/^link\s+(.+?)\s+and\s+(.+?)\s+as\s+([\w ]+?)(?:\s*\?)?$/);
+    if (m) { const r = applyRelLink(m[1], m[2], m[3]); if (r) return r; } }
 
   // GENERAL KEYWORD / DESCRIPTION SEARCH
   const kwMatch = q.match(/(?:find|show|list|who|people|anyone|someone|profiles?)\s+(?:who |that |with |are |is |identify(?:ing)? as |work(?:s|ing)? (?:as|in) |(?:have|has) )?(.+)/);
@@ -4973,6 +5092,7 @@ function App() {
       const result = interpretChat(cmd, profiles);
       if (!result) return null;
       if (result.exit) { setChatMode(false); return result.lines; }
+      if (result.newProfiles) setProfiles(result.newProfiles);
       return result.lines;
     }
 

@@ -55,7 +55,10 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
 - Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `download <name|id>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `purge`, `chat`, `help`/`?`.
-- **Chat mode** (`chat`): switches the terminal into a natural-language query interface. Ask questions like *"who has a birthday in May"*, *"find people who identify as hackers"*, *"who lives in Berlin"*, *"tell me about Lukas"*, *"who is over 40"*, *"who has Signal"*, *"who is a POI"*. Type `exit` to return to the normal shell.
+- **Chat mode** (`chat`): switches the terminal into a natural-language interface for querying and editing data. Type `exit` to return to the normal shell.
+  - **Queries**: *"who has a birthday in May"*, *"find people who identify as hackers"*, *"who lives in Berlin"*, *"tell me about Lukas"*, *"who is over 40"*, *"who has Signal"*, *"who is a POI"*
+  - **Relationship linking**: *"Josh is Kevin's parent"*, *"Josh is the parent of Kevin"*, *"Josh and Kevin are friends"*, *"link Josh and Kevin as rivals"* — creates bidirectional links with the correct reverse type (parent↔child, boss↔subordinate, mentor↔mentee, etc.)
+  - **Field updates**: *"set Josh's description to …"*, *"update address for Priya to …"*, *"Josh's notes is now …"*
 - Hidden commands: `classified <enable|disable|on|off>` toggles classified mode.
 
 ### Image Directory
