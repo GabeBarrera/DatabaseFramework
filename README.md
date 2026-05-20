@@ -62,6 +62,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
   - **Field updates**: *"set Josh's description to …"*, *"update address for Priya to …"*, *"Josh's notes is now …"*
   - **Field clearing**: *"delete Josh's birthday"*, *"delete birthday in Josh"*, *"clear Josh's address"* — first name and last name cannot be cleared
   - **Profile deletion**: *"delete Josh"* or *"delete profile Josh"* — prompts for confirmation (`confirm` / `cancel`) before removing
+  - **Profile creation**: *"add Kevin Bacon"* or *"create Kevin Bacon"* — creates a new profile instantly. If only one name is given (e.g. *"add Kevin"*), the terminal asks whether it is a first or last name; the other field is stored as `[unknown]` and highlighted in red in the output
 - Hidden commands: `classified <enable|disable|on|off>` toggles classified mode.
 
 ### Image Directory

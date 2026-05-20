@@ -4722,6 +4722,19 @@ function interpretChat(query, profiles, pending) {
     );
   };
 
+  const createProfileEntry = (firstName, lastName) => {
+    const id = "P-0x" + Math.floor(Math.random() * 0xfff).toString(16).toUpperCase().padStart(3, "0");
+    const newProfile = {
+      id, firstName, lastName,
+      dob: "", ethnicity: "", sex: "", address: "", description: "", image: "",
+      contacts: [], relationships: [], poi: false, hidden: false, classified: false,
+    };
+    const lines = [{ kind: "acc", text: `> created :: ${firstName} ${lastName}  [${id}]` }];
+    if (firstName === "[unknown]") lines.push({ kind: "err", text: `  firstName → [unknown]  ← set with: set ${lastName}'s first name to ...` });
+    if (lastName  === "[unknown]") lines.push({ kind: "err", text: `  lastName  → [unknown]  ← set with: set ${firstName}'s last name to ...` });
+    return { lines, newProfiles: [...profiles, newProfile], pendingAction: null };
+  };
+
   const fmt = (ps, label) => {
     if (!ps.length) return [{ kind: "dim", text: `> no results :: ${label}` }];
     return [
@@ -4732,21 +4745,32 @@ function interpretChat(query, profiles, pending) {
 
   // PENDING CONFIRMATION
   if (pending) {
-    if (/^(yes|confirm|y)$/.test(q)) {
-      if (pending.type === "deleteProfile") {
+    if (pending.type === "nameQuestion") {
+      if (/^(first|first name|f|fn)$/.test(q))
+        return createProfileEntry(pending.name, "[unknown]");
+      if (/^(last|last name|l|ln|surname)$/.test(q))
+        return createProfileEntry("[unknown]", pending.name);
+      if (/^(no|cancel|n|abort)$/.test(q))
+        return { lines: ["  aborted"], pendingAction: null };
+      return {
+        lines: [{ kind: "acc", text: `> is "${pending.name}" a first or last name? type 'first' or 'last'` }],
+        pendingAction: pending,
+      };
+    }
+    if (pending.type === "deleteProfile") {
+      if (/^(yes|confirm|y)$/.test(q))
         return {
           lines: [{ kind: "acc", text: `> deleted :: ${pending.displayName}  [${pending.profileId}]` }],
           newProfiles: profiles.filter((p) => p.id !== pending.profileId),
           pendingAction: null,
         };
-      }
+      if (/^(no|cancel|n|abort)$/.test(q))
+        return { lines: ["  aborted"], pendingAction: null };
+      return {
+        lines: [{ kind: "acc", text: `> ⚠ pending: delete ${pending.displayName} — type 'confirm' or 'cancel'` }],
+        pendingAction: pending,
+      };
     }
-    if (/^(no|cancel|n|abort)$/.test(q))
-      return { lines: ["  aborted"], pendingAction: null };
-    return {
-      lines: [{ kind: "acc", text: `> ⚠ pending: delete ${pending.displayName} — type 'confirm' or 'cancel'` }],
-      pendingAction: pending,
-    };
   }
 
   // EXIT
@@ -4786,6 +4810,8 @@ function interpretChat(query, profiles, pending) {
       "  delete/clear [name]'s [field]           — e.g. delete josh's birthday",
       "  delete [field] in [name]                — e.g. delete birthday in josh",
       "  delete [name]                           — deletes profile (asks confirmation)",
+      "  add [first] [last]                      — creates a new profile",
+      "  add [name]                              — creates profile, asks first or last name",
       "",
       "  exit — return to shell",
     ]};
@@ -5040,6 +5066,20 @@ function interpretChat(query, profiles, pending) {
           "  type 'confirm' to proceed  ·  type 'cancel' to abort",
         ],
         pendingAction: { type: "deleteProfile", profileId: p.id, displayName: `${p.firstName} ${p.lastName}` },
+      };
+    }
+  }
+
+  // ADD PROFILE
+  { const m = q.match(/^(?:add|create|new profile|new record|new entry|add profile|add record)\s+(.+?)(?:\s*\?)?$/);
+    if (m) {
+      const raw = m[1].trim();
+      const parts = raw.split(/\s+/);
+      if (parts.length >= 2)
+        return createProfileEntry(parts[0], parts.slice(1).join(" "));
+      return {
+        lines: [{ kind: "acc", text: `> is "${raw}" a first or last name? type 'first' or 'last'` }],
+        pendingAction: { type: "nameQuestion", name: raw },
       };
     }
   }
