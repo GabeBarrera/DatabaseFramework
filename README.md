@@ -58,7 +58,10 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 - **Chat mode** (`chat`): switches the terminal into a natural-language interface for querying and editing data. Type `exit` to return to the normal shell.
   - **Queries**: *"who has a birthday in May"*, *"find people who identify as hackers"*, *"who lives in Berlin"*, *"tell me about Lukas"*, *"who is over 40"*, *"who has Signal"*, *"who is a POI"*
   - **Relationship linking**: *"Josh is Kevin's parent"*, *"Josh is the parent of Kevin"*, *"Josh and Kevin are friends"*, *"link Josh and Kevin as rivals"* — creates bidirectional links with the correct reverse type (parent↔child, boss↔subordinate, mentor↔mentee, etc.)
+  - **Relationship unlinking**: *"delete the relationship between Josh and Kevin"*, *"unlink Josh and Kevin"*, *"remove Josh's relationship with Kevin"*
   - **Field updates**: *"set Josh's description to …"*, *"update address for Priya to …"*, *"Josh's notes is now …"*
+  - **Field clearing**: *"delete Josh's birthday"*, *"delete birthday in Josh"*, *"clear Josh's address"* — first name and last name cannot be cleared
+  - **Profile deletion**: *"delete Josh"* or *"delete profile Josh"* — prompts for confirmation (`confirm` / `cancel`) before removing
 - Hidden commands: `classified <enable|disable|on|off>` toggles classified mode.
 
 ### Image Directory

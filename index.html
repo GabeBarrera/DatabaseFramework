@@ -4708,7 +4708,7 @@ const FIELD_ALIASES = {
   "description": "description", "notes": "description", "bio": "description", "about": "description", "info": "description",
 };
 
-function interpretChat(query, profiles) {
+function interpretChat(query, profiles, pending) {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
@@ -4730,9 +4730,28 @@ function interpretChat(query, profiles) {
     ];
   };
 
+  // PENDING CONFIRMATION
+  if (pending) {
+    if (/^(yes|confirm|y)$/.test(q)) {
+      if (pending.type === "deleteProfile") {
+        return {
+          lines: [{ kind: "acc", text: `> deleted :: ${pending.displayName}  [${pending.profileId}]` }],
+          newProfiles: profiles.filter((p) => p.id !== pending.profileId),
+          pendingAction: null,
+        };
+      }
+    }
+    if (/^(no|cancel|n|abort)$/.test(q))
+      return { lines: ["  aborted"], pendingAction: null };
+    return {
+      lines: [{ kind: "acc", text: `> ⚠ pending: delete ${pending.displayName} — type 'confirm' or 'cancel'` }],
+      pendingAction: pending,
+    };
+  }
+
   // EXIT
   if (/^(exit|quit|bye|leave|:q|end|stop)$/.test(q))
-    return { exit: true, lines: ["> returning to shell"] };
+    return { exit: true, pendingAction: null, lines: ["> returning to shell"] };
 
   // HELP
   if (/^help/.test(q))
@@ -4754,13 +4773,19 @@ function interpretChat(query, profiles) {
       "  find people who [keyword]",
       "",
       "MUTATIONS:",
-      "  [name] is [name]'s [relation]    — e.g. josh is kevin's parent",
-      "  [name] is [a/the] [rel] of [name]— e.g. josh is the parent of kevin",
-      "  [name] and [name] are [rel]s     — e.g. josh and kevin are friends",
-      "  link [name] and [name] as [rel]  — e.g. link josh and kevin as rivals",
-      "  set [name]'s [field] to [value]  — e.g. set josh's description to ...",
+      "  [name] is [name]'s [relation]          — e.g. josh is kevin's parent",
+      "  [name] is [a/the] [rel] of [name]      — e.g. josh is the parent of kevin",
+      "  [name] and [name] are [rel]s            — e.g. josh and kevin are friends",
+      "  link [name] and [name] as [rel]         — e.g. link josh and kevin as rivals",
+      "  delete relationship between [A] and [B] — removes link from both sides",
+      "  unlink [name] and [name]                — same as above",
+      "  [name]'s relationship with [name]       — remove specific link",
+      "  set [name]'s [field] to [value]         — e.g. set josh's description to ...",
       "  update [field] for [name] to [value]",
       "  [name]'s [field] is now [value]",
+      "  delete/clear [name]'s [field]           — e.g. delete josh's birthday",
+      "  delete [field] in [name]                — e.g. delete birthday in josh",
+      "  delete [name]                           — deletes profile (asks confirmation)",
       "",
       "  exit — return to shell",
     ]};
@@ -4875,6 +4900,45 @@ function interpretChat(query, profiles) {
     if (res.length) return { lines: fmt(res, `in "${place}"`) };
   }
 
+  // RELATIONSHIP UNLINK
+  { const m = q.match(/^(?:delete|remove|unlink)\s+(?:the\s+)?(?:\w+\s+)?relationship\s+between\s+(.+?)\s+and\s+(.+?)(?:\s*\?)?$/);
+    if (m) {
+      const profA = findProfile(m[1].trim());
+      const profB = findProfile(m[2].trim());
+      if (!profA) return { lines: [{ kind: "err", text: `> profile not found :: "${m[1].trim()}"` }] };
+      if (!profB) return { lines: [{ kind: "err", text: `> profile not found :: "${m[2].trim()}"` }] };
+      const hadA = (profA.relationships || []).some((r) => r.refId === profB.id);
+      const hadB = (profB.relationships || []).some((r) => r.refId === profA.id);
+      if (!hadA && !hadB) return { lines: [{ kind: "dim", text: `> no relationship found between ${profA.firstName} ${profA.lastName} and ${profB.firstName} ${profB.lastName}` }] };
+      return {
+        lines: [{ kind: "acc", text: `> unlinked :: ${profA.firstName} ${profA.lastName}  ↔  ${profB.firstName} ${profB.lastName}` }],
+        newProfiles: profiles.map((p) => {
+          if (p.id === profA.id) return { ...p, relationships: (p.relationships || []).filter((r) => r.refId !== profB.id) };
+          if (p.id === profB.id) return { ...p, relationships: (p.relationships || []).filter((r) => r.refId !== profA.id) };
+          return p;
+        }),
+      };
+    }
+  }
+  // unlink [A] and [B]  /  remove [A]'s relationship with [B]
+  { const m = q.match(/^unlink\s+(.+?)\s+and\s+(.+?)(?:\s*\?)?$/) ||
+               q.match(/^(?:delete|remove)\s+(.+?)'s\s+relationship\s+with\s+(.+?)(?:\s*\?)?$/);
+    if (m) {
+      const profA = findProfile(m[1].trim());
+      const profB = findProfile(m[2].trim());
+      if (!profA) return { lines: [{ kind: "err", text: `> profile not found :: "${m[1].trim()}"` }] };
+      if (!profB) return { lines: [{ kind: "err", text: `> profile not found :: "${m[2].trim()}"` }] };
+      return {
+        lines: [{ kind: "acc", text: `> unlinked :: ${profA.firstName} ${profA.lastName}  ↔  ${profB.firstName} ${profB.lastName}` }],
+        newProfiles: profiles.map((p) => {
+          if (p.id === profA.id) return { ...p, relationships: (p.relationships || []).filter((r) => r.refId !== profB.id) };
+          if (p.id === profB.id) return { ...p, relationships: (p.relationships || []).filter((r) => r.refId !== profA.id) };
+          return p;
+        }),
+      };
+    }
+  }
+
   // FIELD UPDATE
   const QUESTION_WORDS = /^(who|what|which|where|when|how|is|are|do|does|did|will|would|can|could|should)$/;
   const applyFieldUpdate = (nameRaw, fieldRaw, value) => {
@@ -4900,6 +4964,26 @@ function interpretChat(query, profiles) {
   // [name]'s [field] is now [value]
   { const m = q.match(/^(.+?)'s\s+(.+?)\s+is\s+now\s+(.+)$/);
     if (m && !QUESTION_WORDS.test(m[1].trim().toLowerCase())) return applyFieldUpdate(m[1], m[2], m[3]); }
+
+  // FIELD CLEAR
+  const applyClearField = (nameRaw, fieldRaw) => {
+    const fieldKey = FIELD_ALIASES[fieldRaw.trim().toLowerCase()];
+    if (!fieldKey) return { lines: [{ kind: "err", text: `> unknown field :: "${fieldRaw.trim()}"` }] };
+    if (fieldKey === "firstName" || fieldKey === "lastName")
+      return { lines: [{ kind: "err", text: `> cannot clear required field :: ${fieldKey}` }] };
+    const p = findProfile(nameRaw.trim());
+    if (!p) return { lines: [{ kind: "err", text: `> profile not found :: "${nameRaw.trim()}"` }] };
+    return {
+      lines: [{ kind: "acc", text: `> cleared :: ${p.firstName} ${p.lastName}  [${p.id}]  — ${fieldKey}` }],
+      newProfiles: profiles.map((x) => x.id === p.id ? { ...x, [fieldKey]: "" } : x),
+    };
+  };
+  // delete/clear/remove [name]'s [field]
+  { const m = q.match(/^(?:delete|clear|remove)\s+(.+?)'s\s+(.+?)(?:\s*\?)?$/);
+    if (m && FIELD_ALIASES[m[2].trim().toLowerCase()]) return applyClearField(m[1], m[2]); }
+  // delete/clear/remove [field] in/for/from [name]
+  { const m = q.match(/^(?:delete|clear|remove)\s+(.+?)\s+(?:in|for|from|of)\s+(.+?)(?:\s*\?)?$/);
+    if (m && FIELD_ALIASES[m[1].trim().toLowerCase()]) return applyClearField(m[2], m[1]); }
 
   // RELATIONSHIP LINK
   const applyRelLink = (aName, bName, relTypeRaw) => {
@@ -4946,6 +5030,20 @@ function interpretChat(query, profiles) {
   { const m = q.match(/^link\s+(.+?)\s+and\s+(.+?)\s+as\s+([\w ]+?)(?:\s*\?)?$/);
     if (m) { const r = applyRelLink(m[1], m[2], m[3]); if (r) return r; } }
 
+  // PROFILE DELETE (with confirmation)
+  { const m = q.match(/^(?:delete|remove)\s+(?:profile\s+|record\s+|user\s+)?(.+?)(?:\s*\?)?$/);
+    if (m) {
+      const p = findProfile(m[1].trim());
+      if (p) return {
+        lines: [
+          { kind: "acc", text: `> ⚠ delete ${p.firstName} ${p.lastName}  [${p.id}]` },
+          "  type 'confirm' to proceed  ·  type 'cancel' to abort",
+        ],
+        pendingAction: { type: "deleteProfile", profileId: p.id, displayName: `${p.firstName} ${p.lastName}` },
+      };
+    }
+  }
+
   // GENERAL KEYWORD / DESCRIPTION SEARCH
   const kwMatch = q.match(/(?:find|show|list|who|people|anyone|someone|profiles?)\s+(?:who |that |with |are |is |identify(?:ing)? as |work(?:s|ing)? (?:as|in) |(?:have|has) )?(.+)/);
   const keyword = (kwMatch ? kwMatch[1] : q).replace(/\?$/, "").trim();
@@ -4983,6 +5081,7 @@ function App() {
   const [field, setField] = useState("all");
   const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
   const [chatMode, setChatMode] = useState(false);
+  const [chatPending, setChatPending] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Sort + filter visible profiles for carousel/search.
@@ -5089,10 +5188,11 @@ function App() {
     if (!cmd) return null;
 
     if (chatMode) {
-      const result = interpretChat(cmd, profiles);
+      const result = interpretChat(cmd, profiles, chatPending);
       if (!result) return null;
-      if (result.exit) { setChatMode(false); return result.lines; }
+      if (result.exit) { setChatMode(false); setChatPending(null); return result.lines; }
       if (result.newProfiles) setProfiles(result.newProfiles);
+      if (result.pendingAction !== undefined) setChatPending(result.pendingAction);
       return result.lines;
     }
 
