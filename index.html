@@ -3789,14 +3789,14 @@ function SearchPanel({ profiles, filtered, query, setQuery, field, setField }) {
 // ============================================================
 // TERMINAL — command prompt that replaces the folder bar
 // ============================================================
-function Terminal({ runCommand, banner, fullrail }) {
+function Terminal({ runCommand, banner, fullrail, chatMode }) {
   const [value, setValue] = useState("");
   const [history, setHistory] = useState(banner ? [{ cmd: null, lines: banner }] : []);
   const [cmdHistory, setCmdHistory] = useState([]);
   const [histIdx, setHistIdx] = useState(-1);
   const inputRef = useRef(null);
   const bodyRef = useRef(null);
-  const PROMPT = "persona@root:~$";
+  const PROMPT = chatMode ? "persona@chat:~$" : "persona@root:~$";
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -3877,7 +3877,7 @@ function Terminal({ runCommand, banner, fullrail }) {
           onKeyDown={onKey}
           autoComplete="off"
           spellCheck={false}
-          placeholder={"try 'help'"}
+          placeholder={chatMode ? "ask a question…" : "try 'help'"}
         />
       </form>
     </div>
@@ -4678,6 +4678,176 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
 }
 
 // ============================================================
+// CHAT INTERPRETER
+// ============================================================
+const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+
+function interpretChat(query, profiles) {
+  const q = query.toLowerCase().trim();
+  if (!q) return null;
+
+  const fmt = (ps, label) => {
+    if (!ps.length) return [{ kind: "dim", text: `> no results :: ${label}` }];
+    return [
+      `> ${ps.length} match(es) :: ${label}`,
+      ...ps.map((p) => `  · ${p.firstName} ${p.lastName}  [${p.id}]`)
+    ];
+  };
+
+  // EXIT
+  if (/^(exit|quit|bye|leave|:q|end|stop)$/.test(q))
+    return { exit: true, lines: ["> returning to shell"] };
+
+  // HELP
+  if (/^help/.test(q))
+    return { lines: [
+      { kind: "acc", text: "chat mode — ask questions about your data:" },
+      "  how many profiles are there",
+      "  who has a birthday in [month]",
+      "  who was born in [year]",
+      "  who is older / younger than [age]",
+      "  who lives in [place]",
+      "  who is [ethnicity]",
+      "  who is male / female / nonbinary",
+      "  who has [signal / telegram / github / ...]",
+      "  who is a POI / hidden / classified",
+      "  who is related to [name]",
+      "  tell me about [name]",
+      "  find people who [keyword]",
+      "  exit — return to shell",
+    ]};
+
+  // COUNT
+  if (/how many/.test(q))
+    return { lines: [`> ${profiles.length} profile(s) in the database`] };
+
+  // BIRTHDAY IN MONTH
+  const monthTest = q.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/);
+  if (monthTest && /birthday|born|dob/.test(q)) {
+    const abbr = monthTest[1].slice(0, 3);
+    const mIdx = MONTHS.findIndex((m) => m.startsWith(abbr));
+    const res = profiles.filter((p) => p.dob && parseInt(p.dob.split("-")[1], 10) === mIdx + 1);
+    return { lines: fmt(res, `birthday in ${MONTHS[mIdx]}`) };
+  }
+
+  // BORN IN YEAR
+  const yearTest = q.match(/\b(19|20)\d{2}\b/);
+  if (yearTest && /born|dob|birthday/.test(q)) {
+    const res = profiles.filter((p) => p.dob && p.dob.startsWith(yearTest[0]));
+    return { lines: fmt(res, `born in ${yearTest[0]}`) };
+  }
+
+  // AGE OVER / UNDER
+  const ageTest = q.match(/\b(older than|over|under|younger than|age)\s+(\d+)/);
+  if (ageTest) {
+    const n = parseInt(ageTest[2], 10);
+    const over = /older|over/.test(ageTest[1]);
+    const now = new Date();
+    const res = profiles.filter((p) => {
+      if (!p.dob) return false;
+      const d = new Date(p.dob);
+      const age = now.getFullYear() - d.getFullYear() -
+        (now < new Date(now.getFullYear(), d.getMonth(), d.getDate()) ? 1 : 0);
+      return over ? age > n : age < n;
+    });
+    return { lines: fmt(res, `age ${over ? "over" : "under"} ${n}`) };
+  }
+
+  // FLAGS
+  if (/\bpoi\b|person of interest/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.poi), "POI") };
+  if (/\bhidden\b/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.hidden), "hidden") };
+  if (/\bclassified\b/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.classified), "classified") };
+
+  // SEX / GENDER
+  if (/\b(male|man|men)\b/.test(q) && !/female|woman|women/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.sex === "M"), "sex: M") };
+  if (/\b(female|woman|women)\b/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.sex === "F"), "sex: F") };
+  if (/\b(nonbinary|non-binary|\bnb\b|enby)\b/.test(q))
+    return { lines: fmt(profiles.filter((p) => p.sex === "NB"), "sex: NB") };
+
+  // CONTACT TYPE
+  const contactTypes = ["email","phone","signal","telegram","discord","x","instagram","github","linkedin","irc","keybase","matrix","session","xmpp","website"];
+  for (const ct of contactTypes) {
+    if (new RegExp(`\\b${ct}\\b`).test(q)) {
+      const res = profiles.filter((p) => (p.contacts || []).some((c) => c.type === ct));
+      return { lines: fmt(res, `contact: ${ct}`) };
+    }
+  }
+
+  // RELATED TO [name]
+  const relMatch = q.match(/(?:related to|knows?|connected to|linked to|associate of|friend of|works? with)\s+([a-z\s\-]+)/);
+  if (relMatch) {
+    const name = relMatch[1].trim();
+    const res = profiles.filter((p) => (p.relationships || []).some((r) => r.name.toLowerCase().includes(name)));
+    return { lines: fmt(res, `related to "${name}"`) };
+  }
+
+  // TELL ME ABOUT [name]
+  const aboutMatch = q.match(/(?:tell me about|describe|who is|what do you know about|info on|show me)\s+([a-z0-9\s\-]+)/);
+  if (aboutMatch) {
+    const name = aboutMatch[1].trim();
+    const p = profiles.find((x) =>
+      `${x.firstName} ${x.lastName}`.toLowerCase().includes(name) ||
+      x.firstName.toLowerCase() === name ||
+      x.lastName.toLowerCase() === name ||
+      (x.id || "").toLowerCase() === name
+    );
+    if (p) {
+      const lines = [
+        { kind: "acc", text: `> ${p.firstName} ${p.lastName}  [${p.id}]` },
+      ];
+      if (p.dob) {
+        const d = new Date(p.dob);
+        const now = new Date();
+        const age = now.getFullYear() - d.getFullYear() -
+          (now < new Date(now.getFullYear(), d.getMonth(), d.getDate()) ? 1 : 0);
+        lines.push(`  DOB       :: ${p.dob}  (age ${age})`);
+      }
+      if (p.sex)         lines.push(`  sex       :: ${p.sex}`);
+      if (p.ethnicity)   lines.push(`  ethnicity :: ${p.ethnicity}`);
+      if (p.address)     lines.push(`  address   :: ${p.address}`);
+      if (p.description) lines.push(`  notes     :: ${p.description}`);
+      if (p.contacts && p.contacts.length)
+        lines.push(`  contacts  :: ${p.contacts.map((c) => `${c.type}: ${c.value}`).join("  ·  ")}`);
+      if (p.relationships && p.relationships.length)
+        lines.push(`  links     :: ${p.relationships.map((r) => `${r.type}: ${r.name}`).join("  ·  ")}`);
+      return { lines };
+    }
+  }
+
+  // LOCATION SEARCH
+  const locMatch = q.match(/(?:lives? in|from|based in|located in|in)\s+([a-z\s,\-]+?)(?:\?|$)/);
+  if (locMatch && /lives?|from|based|located/.test(q)) {
+    const place = locMatch[1].trim();
+    const res = profiles.filter((p) => p.address && p.address.toLowerCase().includes(place));
+    if (res.length) return { lines: fmt(res, `in "${place}"`) };
+  }
+
+  // GENERAL KEYWORD / DESCRIPTION SEARCH
+  const kwMatch = q.match(/(?:find|show|list|who|people|anyone|someone|profiles?)\s+(?:who |that |with |are |is |identify(?:ing)? as |work(?:s|ing)? (?:as|in) |(?:have|has) )?(.+)/);
+  const keyword = (kwMatch ? kwMatch[1] : q).replace(/\?$/, "").trim();
+  if (keyword.length >= 2) {
+    const words = keyword.split(/\s+/);
+    const res = profiles.filter((p) => {
+      const blob = [
+        p.firstName, p.lastName, p.description, p.ethnicity, p.address, p.sex,
+        ...(p.contacts || []).map((c) => c.value),
+        ...(p.relationships || []).map((r) => `${r.name} ${r.type}`)
+      ].join(" ").toLowerCase();
+      return words.every((w) => blob.includes(w));
+    });
+    if (res.length) return { lines: fmt(res, `"${keyword}"`) };
+    return { lines: [{ kind: "dim", text: `> no results :: "${keyword}"` }] };
+  }
+
+  return { lines: [{ kind: "dim", text: "> couldn't parse that — try 'help' for examples" }] };
+}
+
+// ============================================================
 // APP
 // ============================================================
 function App() {
@@ -4693,6 +4863,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [field, setField] = useState("all");
   const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
+  const [chatMode, setChatMode] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Sort + filter visible profiles for carousel/search.
@@ -4797,6 +4968,14 @@ function App() {
   const runCommand = (raw) => {
     const cmd = raw.trim();
     if (!cmd) return null;
+
+    if (chatMode) {
+      const result = interpretChat(cmd, profiles);
+      if (!result) return null;
+      if (result.exit) { setChatMode(false); return result.lines; }
+      return result.lines;
+    }
+
     const [head, ...rest] = cmd.split(/\s+/);
     const args = rest.join(" ");
     const name = head.toLowerCase();
@@ -4833,7 +5012,8 @@ function App() {
           { kind: "cmd-row", cmd: "clear",        desc: "clear the terminal scrollback" },
           { kind: "cmd-row", cmd: "version",      desc: "prints version" },
           { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" },
-          { kind: "cmd-row", cmd: "download <name|id>", desc: "download a profile as .json" }
+          { kind: "cmd-row", cmd: "download <name|id>", desc: "download a profile as .json" },
+          { kind: "cmd-row", cmd: "chat",         desc: "enter natural-language query mode" }
         ];
       case "purge":
         setPurgeOpen(true);
@@ -4852,6 +5032,12 @@ function App() {
         downloadJSON(target, `${safe}_${target.id}.json`);
         return `> downloading :: ${safe}_${target.id}.json`;
       }
+      case "chat":
+        setChatMode(true);
+        return [
+          { kind: "acc", text: "> chat mode — ask questions about your data in plain english." },
+          "  type 'help' for examples  ·  type 'exit' to return to shell",
+        ];
       case "clear":
       case "cls":
         return "__clear__";
@@ -5063,7 +5249,7 @@ function App() {
             <span>// SHELL</span><span className="bar" />
             <span className="blink">_</span>
           </div>
-          <Terminal fullrail runCommand={runCommand} banner={terminalBanner} />
+          <Terminal fullrail runCommand={runCommand} banner={terminalBanner} chatMode={chatMode} />
         </aside>
 
         <section className="stage">
