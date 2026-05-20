@@ -251,7 +251,11 @@
     border-color: var(--grn-2);
     box-shadow: 0 0 0 1px var(--grn-4), 0 0 14px rgba(0,255,102,0.15);
   }
-  .input-wrap .pfx { color: var(--grn-3); }
+  .input-wrap .pfx {
+    color: var(--grn-3);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
   .input-wrap input,
   .input-wrap select,
   .input-wrap textarea {
