@@ -5,11 +5,13 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 ## Features
 
 ### Profile Management
-- **Create, edit, and delete** fictional persona records with fields for: first/last name, date of birth, ethnicity, sex, address, description, and a profile image reference.
-- **Contacts**: attach multiple contact methods per profile (phone, email, Telegram, X, Instagram, GitHub, Signal, Keybase, website).
+- **Create, edit, and delete** fictional persona records. Required fields: first name, last name, date of birth, and sex. Optional fields: ethnicity, address, description, and profile image.
+- **Sex options**: M, F, NB, X.
+- **Contacts**: attach multiple contact methods per profile — email, phone, Signal, Telegram, Discord, X, Instagram, GitHub, LinkedIn, IRC, Keybase, Matrix, Session, XMPP, website, and other.
 - **Relationships**: link profiles to one another with a labeled relationship type (friend, spouse, colleague, rival, etc.).
 - **POI flag**: mark a profile as a Person of Interest — POI entries sort to the top of the carousel alphabetically.
-- **Classified flag**: hide sensitive records behind a hidden shell toggle (`classified` command in the terminal). Classified profiles are invisible in normal mode.
+- **Hidden flag**: hide a profile from the carousel without deleting it. Hidden profiles are dimmed/invisible in normal view.
+- **Classified flag**: hide sensitive records behind a shell toggle (`classified` command in the terminal). Classified profiles are invisible in normal mode.
 
 ### Carousel View
 - Profiles are displayed as cards in a horizontally scrollable carousel.
@@ -20,14 +22,20 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ### Search & Filter
 - A search bar above the carousel filters the visible cards in real time.
-- Filter scope can be set to `all` fields or scoped to a specific field (name, DOB, address, etc.).
+- Filter scope can be set to `all` fields or scoped to a specific field (firstName, lastName, dob, ethnicity, sex, address, description).
 - Filter chips below the search bar offer quick-access field toggles.
 
 ### Detail Modal
 - Displays all profile fields, contacts (with clickable links), and relationships (with links to open referenced profiles).
 - **Download JSON**: exports the selected profile as a `.json` file.
-- **Toggle POI / Classified** status directly from the modal.
+- **Toggle POI / Hidden / Classified** status directly from the modal.
 - **Open on Map**: flies the world map to the profile's geocoded address.
+
+### Relationship Graph
+- A full-screen SVG graph visualization of how profiles are connected.
+- Nodes are draggable; edges are color-coded by relationship category (blue for family, amber for professional, red for parent-child).
+- Zoom controls and a side panel listing all related profiles.
+- Toggle to include or exclude hidden profiles from the graph.
 
 ### World Map (Leaflet / OpenStreetMap)
 - A full-screen map view showing pins for every profile that has a geocoded address.
@@ -38,20 +46,21 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
-- Key commands: `list`/`ls`, `find <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`, `count`, `scope <field>`, `clear-filter`, `date`, `echo`, `clear`, `help`.
-- Hidden commands unlock classified mode and allow database purge.
+- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `help`/`?`.
+- Hidden commands: `classified <enable|disable|on|off>` toggles classified mode; a separate hidden command wipes all data and resets to seed data (UI purge button also available).
 
 ### Image Directory
 - Point the app at a local folder of images via the **File System Access API** (Chromium) or a fallback `<input webkitdirectory>` picker.
 - Profile image fields are matched to files in the folder by filename (case-insensitive, with and without extension).
 - Linked folder name is remembered in `localStorage` across sessions.
+- Profile images can also be embedded directly as `imageData` (binary) for portable export/import when no folder is linked.
 
 ### Data Persistence
 - All profiles are stored in `localStorage` under the key `personaDB::v3`.
 - Geocode results are cached separately under `personaDB::geocode::v1`.
 - **Export**: individual profiles can be downloaded as JSON from the detail modal.
 - **Import**: the edit/create form accepts a JSON paste to pre-populate fields.
-- A **purge** command wipes all user-created records and resets to seed data.
+- A **Purge** button in the UI wipes all user-created records and resets to seed data.
 
 ## Seed Data
 
