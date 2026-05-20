@@ -1994,6 +1994,125 @@
   /* map: list panel collapses to header only when hidden */
   .map-list.hidden .lbody { display: none; }
   .map-list.hidden { grid-template-rows: auto; bottom: auto; }
+
+  /* ============================================================
+     RELATIONSHIPS GRAPH MODAL
+  ============================================================ */
+  .rel-modal {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.97);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    font-family: var(--mono);
+  }
+  .rel-toolbar {
+    border-bottom: 1px solid var(--line-2);
+    padding: 8px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(180deg, #020604, #020604);
+    position: relative; z-index: 2;
+  }
+  .rel-toolbar-title {
+    font-size: 11px; letter-spacing: 0.3em;
+    color: var(--grn-2); text-transform: uppercase; flex: 1;
+  }
+  .rel-toolbar-stats {
+    font-size: 10.5px; color: var(--dim);
+    letter-spacing: 0.16em; display: flex; gap: 16px;
+  }
+  .rel-toolbar-stats b { color: var(--grn-0); }
+  .rel-body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    min-height: 0; overflow: hidden;
+  }
+  .rel-canvas-wrap {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(1200px 600px at 60% 40%, rgba(0,60,25,0.12), transparent 60%),
+      var(--bg);
+  }
+  .rel-svg {
+    width: 100%; height: 100%;
+    display: block; cursor: grab;
+  }
+  .rel-svg.dragging { cursor: grabbing; }
+  .rel-node { cursor: grab; }
+  .rel-node:active { cursor: grabbing; }
+  .rel-node:hover .node-bg { stroke: var(--grn-0); }
+  .rel-hint {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(2,8,5,0.85); border: 1px dashed var(--line-2);
+    padding: 4px 14px; font-size: 10px; letter-spacing: 0.16em;
+    color: var(--dim); text-transform: uppercase; pointer-events: none;
+    white-space: nowrap;
+  }
+  .rel-zoom-btns {
+    position: absolute; bottom: 42px; right: 18px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .rel-zoom-btns button {
+    width: 32px; height: 32px;
+    background: rgba(2,8,5,0.9); border: 1px solid var(--line-2);
+    color: var(--grn-1); font-family: var(--mono); font-size: 18px;
+    line-height: 1; cursor: pointer; transition: all 0.12s;
+  }
+  .rel-zoom-btns button:hover { background: rgba(0,255,102,0.1); border-color: var(--grn-3); }
+  .rel-list {
+    border-left: 1px dashed var(--line-2);
+    width: 222px; display: flex; flex-direction: column;
+    background: var(--bg); min-height: 0;
+    transition: width 0.22s cubic-bezier(.22,.61,.36,1), opacity 0.18s;
+    overflow: hidden;
+  }
+  .rel-list.collapsed { width: 0; opacity: 0; pointer-events: none; }
+  .rel-list-head {
+    padding: 8px 12px 8px 14px; font-size: 10.5px;
+    letter-spacing: 0.2em; color: var(--grn-2); text-transform: uppercase;
+    border-bottom: 1px dashed var(--line-2);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .rel-list-head .bar { flex: 1; border-top: 1px dashed var(--line-2); margin-left: 4px; }
+  .rel-list-body { flex: 1; overflow-y: auto; min-height: 0; }
+  .rel-list-row {
+    display: grid; grid-template-columns: 22px 1fr 28px;
+    align-items: center; gap: 8px;
+    padding: 6px 10px 6px 10px;
+    border-bottom: 1px dotted var(--line);
+    transition: background 0.1s;
+  }
+  .rel-list-row:hover { background: rgba(0,255,102,0.05); }
+  .rel-list-row.faded { opacity: 0.32; }
+  .rel-list-row .rl-init {
+    width: 22px; height: 22px; border: 1px solid var(--line-2);
+    background: #061a10; color: var(--grn-2);
+    display: grid; place-items: center; font-size: 9px; font-weight: 700;
+  }
+  .rel-list-row .rl-name {
+    font-size: 11px; color: var(--grn-0);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .rel-list-row .rl-id { font-size: 8.5px; color: var(--dim); letter-spacing: 0.1em; }
+  .rel-list-row .rl-eye {
+    background: none; border: 1px solid transparent;
+    color: var(--grn-3); font-family: var(--mono); font-size: 13px;
+    cursor: pointer; padding: 1px 3px; line-height: 1; transition: all 0.1s;
+    justify-self: end;
+  }
+  .rel-list-row .rl-eye:hover { color: var(--grn-0); border-color: var(--line-2); }
+  .rel-list-foot {
+    border-top: 1px dashed var(--line-2); padding: 6px 10px;
+    display: flex; gap: 6px; flex-shrink: 0;
+  }
+  .rel-list-foot button {
+    flex: 1; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--line-2);
+    color: var(--dim); font-family: var(--mono); cursor: pointer; padding: 4px 4px;
+    transition: all 0.12s;
+  }
+  .rel-list-foot button:hover { color: var(--grn-0); border-color: var(--grn-3); }
 </style>
 </head>
 <body>
@@ -3864,6 +3983,415 @@ function PurgeModal({ count, onConfirm, onClose }) {
 }
 
 // ============================================================
+// RELATIONSHIPS GRAPH MODAL
+// ============================================================
+
+function buildRelGraph(profiles, hiddenIds) {
+  const visible = profiles.filter((p) => !hiddenIds.has(p.id));
+  const visibleSet = new Set(visible.map((p) => p.id));
+  const edgeMap = new Map();
+  visible.forEach((p) => {
+    (p.relationships || []).forEach((r) => {
+      if (!r.refId || !visibleSet.has(r.refId)) return;
+      const key = [p.id, r.refId].sort().join("↔");
+      if (!edgeMap.has(key)) edgeMap.set(key, { source: p.id, target: r.refId, labels: new Set() });
+      if (r.type) edgeMap.get(key).labels.add(r.type.toLowerCase());
+    });
+  });
+  const edges = [...edgeMap.values()].map((e) => ({
+    source: e.source, target: e.target,
+    label: [...e.labels].join(" / ")
+  }));
+  const connectedIds = new Set();
+  edges.forEach((e) => { connectedIds.add(e.source); connectedIds.add(e.target); });
+  return {
+    connected: visible.filter((p) => connectedIds.has(p.id)),
+    isolated:  visible.filter((p) => !connectedIds.has(p.id)),
+    edges
+  };
+}
+
+function forceLayout(nodes, edges, W, H, NW, NH, iters) {
+  if (nodes.length === 0) return {};
+  const pad = 16;
+  const area = { x: NW / 2 + pad, y: NH / 2 + pad, w: W - NW - pad * 2, h: H - NH - pad * 2 };
+  const cx = area.x + area.w / 2, cy = area.y + area.h / 2;
+  const r0 = Math.min(area.w, area.h) * 0.34;
+  const pos = {};
+  nodes.forEach((p, i) => {
+    const ang = (i / nodes.length) * Math.PI * 2;
+    pos[p.id] = {
+      x: cx + r0 * Math.cos(ang) + (Math.random() - 0.5) * 24,
+      y: cy + r0 * Math.sin(ang) + (Math.random() - 0.5) * 24,
+      vx: 0, vy: 0
+    };
+  });
+  const ids = nodes.map((p) => p.id);
+  const REPEL = 22000, K_S = 0.055, L_REST = 250, GRAV = 0.04, DAMP = 0.78;
+  for (let it = 0; it < iters; it++) {
+    const fx = {}, fy = {};
+    ids.forEach((id) => { fx[id] = 0; fy[id] = 0; });
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = pos[ids[i]], b = pos[ids[j]];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const f = REPEL / (dist * dist);
+        fx[ids[i]] -= f * dx / dist; fy[ids[i]] -= f * dy / dist;
+        fx[ids[j]] += f * dx / dist; fy[ids[j]] += f * dy / dist;
+      }
+    }
+    edges.forEach((e) => {
+      const a = pos[e.source], b = pos[e.target];
+      if (!a || !b) return;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const f = K_S * (dist - L_REST);
+      fx[e.source] += f * dx / dist; fy[e.source] += f * dy / dist;
+      fx[e.target] -= f * dx / dist; fy[e.target] -= f * dy / dist;
+    });
+    ids.forEach((id) => {
+      fx[id] += GRAV * (cx - pos[id].x);
+      fy[id] += GRAV * (cy - pos[id].y);
+    });
+    ids.forEach((id) => {
+      const p = pos[id];
+      p.vx = (p.vx + fx[id]) * DAMP; p.vy = (p.vy + fy[id]) * DAMP;
+      p.x = Math.max(area.x, Math.min(area.x + area.w, p.x + p.vx));
+      p.y = Math.max(area.y, Math.min(area.y + area.h, p.y + p.vy));
+    });
+  }
+  return pos;
+}
+
+function RelationshipsModal({ profiles, onClose, onSelect }) {
+  const NODE_W = 152, NODE_H = 64, ISO_X = 18;
+  const [hiddenIds, setHiddenIds] = useState(new Set());
+  const [listOpen, setListOpen]   = useState(true);
+  const wrapRef = useRef(null);
+  const svgRef  = useRef(null);
+  const [size, setSize] = useState({ w: 1200, h: 700 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
+  const transformRef  = useRef({ x: 0, y: 0, k: 1 });
+  const canvasDragRef = useRef(null); // { sx, sy } — canvas pan
+  const nodeDragRef   = useRef(null); // { id, ox, oy, moved } — node drag
+  const nodeWasDragged = useRef(false);
+
+  // Keep transformRef current so event handlers avoid stale closures
+  useEffect(() => { transformRef.current = transform; }, [transform]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) setSize({ w: width, h: height });
+    });
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const { connected, isolated, edges } = useMemo(
+    () => buildRelGraph(profiles, hiddenIds),
+    [profiles, hiddenIds]
+  );
+
+  const isolatedSet = useMemo(() => new Set(isolated.map((p) => p.id)), [isolated]);
+
+  const isoColW = isolated.length > 0 ? NODE_W + ISO_X * 2 + 28 : 0;
+  const netArea = useMemo(() => ({
+    w: Math.max(160, size.w - isoColW), h: size.h, ox: isoColW
+  }), [size.w, size.h, isoColW]);
+
+  // Unified position state for every visible node
+  const [positions, setPositions] = useState({});
+  const sizeKey    = `${Math.round(netArea.w)}x${Math.round(netArea.h)}`;
+  const visibleKey = [...connected, ...isolated].map((p) => p.id).sort().join(",");
+  const layoutRef  = useRef({ sizeKey: null, visibleKey: null });
+
+  useEffect(() => {
+    const prev = layoutRef.current;
+    const fullReset   = sizeKey    !== prev.sizeKey;
+    const nodesChanged = visibleKey !== prev.visibleKey;
+    layoutRef.current = { sizeKey, visibleKey };
+    if (!fullReset && !nodesChanged) return;
+
+    setPositions((cur) => {
+      if (fullReset) {
+        // Canvas resized — full re-layout, discard any manual moves
+        const out = {};
+        isolated.forEach((p, i) => {
+          out[p.id] = { x: ISO_X + NODE_W / 2, y: 72 + i * (NODE_H + 16) };
+        });
+        if (connected.length > 0) {
+          const raw = forceLayout(connected, edges, netArea.w, netArea.h, NODE_W, NODE_H, 380);
+          Object.keys(raw).forEach((id) => { out[id] = { x: raw[id].x + netArea.ox, y: raw[id].y }; });
+        }
+        return out;
+      }
+      // Nodes toggled — keep existing positions, only place newly visible nodes
+      const out = { ...cur };
+      let changed = false;
+      isolated.forEach((p, i) => {
+        if (out[p.id] == null) {
+          out[p.id] = { x: ISO_X + NODE_W / 2, y: 72 + i * (NODE_H + 16) };
+          changed = true;
+        }
+      });
+      connected.forEach((p) => {
+        if (out[p.id] == null) {
+          out[p.id] = {
+            x: netArea.ox + netArea.w / 2 + (Math.random() - 0.5) * 140,
+            y: netArea.h / 2 + (Math.random() - 0.5) * 140,
+          };
+          changed = true;
+        }
+      });
+      return changed ? out : cur;
+    });
+  }, [sizeKey, visibleKey]);
+
+  // Convert screen coords → SVG local coords (accounts for pan/zoom transform)
+  const toLocal = (clientX, clientY) => {
+    const rect = svgRef.current ? svgRef.current.getBoundingClientRect() : { left: 0, top: 0 };
+    const t = transformRef.current;
+    return { x: (clientX - rect.left - t.x) / t.k, y: (clientY - rect.top - t.y) / t.k };
+  };
+
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    setTransform((t) => {
+      const newK = Math.max(0.2, Math.min(5, t.k * factor));
+      const rect = svgRef.current ? svgRef.current.getBoundingClientRect() : { left: 0, top: 0 };
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      return { k: newK, x: mx - (mx - t.x) * (newK / t.k), y: my - (my - t.y) * (newK / t.k) };
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [onWheel]);
+
+  // Node mousedown — starts node drag (stopPropagation prevents canvas pan)
+  const onNodeMouseDown = (e, id) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    const local = toLocal(e.clientX, e.clientY);
+    const pos = positions[id] || { x: 0, y: 0 };
+    nodeDragRef.current = { id, ox: local.x - pos.x, oy: local.y - pos.y, moved: false };
+  };
+
+  // Canvas mousedown — starts canvas pan
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return;
+    canvasDragRef.current = { sx: e.clientX - transform.x, sy: e.clientY - transform.y };
+    svgRef.current && svgRef.current.classList.add("dragging");
+  };
+
+  const onMouseMove = (e) => {
+    if (nodeDragRef.current) {
+      // Node drag takes priority over canvas pan
+      nodeDragRef.current.moved = true;
+      const { id, ox, oy } = nodeDragRef.current;
+      const local = toLocal(e.clientX, e.clientY);
+      setPositions((p) => ({ ...p, [id]: { x: local.x - ox, y: local.y - oy } }));
+      return;
+    }
+    if (!canvasDragRef.current) return;
+    setTransform((t) => ({ ...t, x: e.clientX - canvasDragRef.current.sx, y: e.clientY - canvasDragRef.current.sy }));
+  };
+
+  const onMouseUp = () => {
+    // Record whether we just finished a node drag (suppresses the subsequent onClick)
+    nodeWasDragged.current = !!(nodeDragRef.current && nodeDragRef.current.moved);
+    nodeDragRef.current  = null;
+    canvasDragRef.current = null;
+    svgRef.current && svgRef.current.classList.remove("dragging");
+  };
+
+  const resetView = () => setTransform({ x: 0, y: 0, k: 1 });
+  const toggleHidden = (id) => setHiddenIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const showAll = () => setHiddenIds(new Set());
+  const hideAll = () => setHiddenIds(new Set(profiles.map((p) => p.id)));
+
+  const totalVisible = connected.length + isolated.length;
+
+  return (
+    <div className="rel-modal">
+      <div className="rel-toolbar">
+        <div className="rel-toolbar-title">
+          // RELATIONSHIPS &gt; <span style={{ color: "var(--grn-0)" }}>NETWORK_VIEW</span>
+        </div>
+        <div className="rel-toolbar-stats">
+          <span>NODES <b>{totalVisible}</b></span>
+          <span>EDGES <b>{edges.length}</b></span>
+          <span>ISOLATED <b>{isolated.length}</b></span>
+        </div>
+        <button className="ctrl-btn" onClick={() => setListOpen((v) => !v)}>
+          {listOpen ? "◀ HIDE LIST" : "▶ SHOW LIST"}
+        </button>
+        <button className="ctrl-btn" onClick={onClose}>✕ ESC</button>
+      </div>
+
+      <div className="rel-body">
+        <div className="rel-canvas-wrap" ref={wrapRef}>
+          <svg
+            ref={svgRef}
+            className="rel-svg"
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
+            <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
+
+              {isolated.length > 0 && (
+                <>
+                  <line
+                    x1={isoColW - 1} y1={0} x2={isoColW - 1} y2={size.h}
+                    stroke="rgba(14,42,26,0.7)" strokeWidth="1" strokeDasharray="4 7"
+                  />
+                  <text x={ISO_X} y={28}
+                    style={{ fill: "var(--grn-4)", fontSize: 9, letterSpacing: "0.22em", fontFamily: "var(--mono)", textTransform: "uppercase" }}
+                  >// ISOLATED</text>
+                  <text x={ISO_X} y={42}
+                    style={{ fill: "var(--grn-5)", fontSize: 7.5, letterSpacing: "0.14em", fontFamily: "var(--mono)" }}
+                  >NO CONNECTIONS</text>
+                </>
+              )}
+
+              {connected.length > 0 && (
+                <text x={netArea.ox + 12} y={20}
+                  style={{ fill: "var(--grn-5)", fontSize: 9, letterSpacing: "0.2em", fontFamily: "var(--mono)" }}
+                >// NETWORK</text>
+              )}
+
+              {edges.map((e) => {
+                const a = positions[e.source], b = positions[e.target];
+                if (!a || !b) return null;
+                const lx = (a.x + b.x) / 2, ly = (a.y + b.y) / 2 - 9;
+                return (
+                  <g key={`e-${e.source}-${e.target}`}>
+                    <line
+                      x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                      stroke="rgba(0,140,56,0.5)" strokeWidth="1.2" strokeDasharray="5 4"
+                    />
+                    <text x={lx} y={ly} textAnchor="middle"
+                      style={{ fill: "var(--amber)", fontSize: 8.5, fontFamily: "var(--mono)", letterSpacing: "0.1em", pointerEvents: "none" }}
+                    >[{e.label.toUpperCase()}]</text>
+                  </g>
+                );
+              })}
+
+              {[...connected, ...isolated].map((p) => {
+                const pos = positions[p.id];
+                if (!pos) return null;
+                const nx = pos.x - NODE_W / 2, ny = pos.y - NODE_H / 2;
+                const isIso = isolatedSet.has(p.id);
+                const fullName = (p.firstName + " " + p.lastName).toUpperCase();
+                const displayName = fullName.length > 17 ? fullName.slice(0, 16) + "…" : fullName;
+                return (
+                  <g
+                    key={p.id}
+                    className="rel-node"
+                    transform={`translate(${nx},${ny})`}
+                    onMouseDown={(e) => onNodeMouseDown(e, p.id)}
+                    onClick={() => {
+                      if (nodeWasDragged.current) { nodeWasDragged.current = false; return; }
+                      onSelect(p);
+                    }}
+                  >
+                    {p.poi && <rect width={NODE_W} height={NODE_H} fill="none" stroke="rgba(255,203,31,0.22)" strokeWidth="3" />}
+                    <rect className="node-bg" width={NODE_W} height={NODE_H}
+                      fill="#030a06"
+                      stroke={isIso ? "var(--grn-5)" : "var(--grn-3)"}
+                      strokeWidth="1"
+                    />
+                    <rect width={NODE_W} height={2} fill={isIso ? "var(--grn-5)" : "var(--grn-0)"} opacity="0.45" />
+                    <rect x={8} y={10} width={22} height={22} fill="#061a10" stroke="var(--line-2)" strokeWidth="1" />
+                    <text x={19} y={25} textAnchor="middle"
+                      style={{ fill: "var(--grn-1)", fontSize: 9, fontFamily: "var(--mono)", fontWeight: 700 }}
+                    >{initials(p)}</text>
+                    <text x={38} y={22}
+                      style={{ fill: isIso ? "var(--grn-3)" : "var(--grn-0)", fontSize: 10, fontFamily: "var(--mono)", fontWeight: 700, letterSpacing: "0.04em" }}
+                    >{displayName}</text>
+                    <text x={38} y={34}
+                      style={{ fill: "var(--grn-4)", fontSize: 8.5, fontFamily: "var(--mono)", letterSpacing: "0.12em" }}
+                    >{p.id}</text>
+                    <text x={8} y={56}
+                      style={{ fill: "var(--dim)", fontSize: 8, fontFamily: "var(--mono)", letterSpacing: "0.08em" }}
+                    >{(p.relationships || []).length} rel · {isIso ? "ISOLATED" : "LINKED"}</text>
+                    {p.poi && (
+                      <text x={NODE_W - 8} y={14} textAnchor="end"
+                        style={{ fill: "var(--amber)", fontSize: 10, fontFamily: "var(--mono)" }}
+                      >★</text>
+                    )}
+                    {p.classified && (
+                      <>
+                        <rect x={NODE_W - 62} y={NODE_H - 15} width={60} height={12}
+                          fill="rgba(255,51,85,0.12)" stroke="rgba(255,51,85,0.38)" strokeWidth="0.5" />
+                        <text x={NODE_W - 32} y={NODE_H - 6} textAnchor="middle"
+                          style={{ fill: "var(--red)", fontSize: 6.5, fontFamily: "var(--mono)", letterSpacing: "0.12em" }}
+                        >CLASSIFIED</text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+
+          <div className="rel-hint">scroll to zoom · drag canvas to pan · drag nodes to rearrange · click to open</div>
+
+          <div className="rel-zoom-btns">
+            <button onClick={() => setTransform((t) => ({ ...t, k: Math.min(5, t.k * 1.2) }))}>+</button>
+            <button onClick={resetView} style={{ fontSize: 10, letterSpacing: "0.08em" }}>FIT</button>
+            <button onClick={() => setTransform((t) => ({ ...t, k: Math.max(0.2, t.k / 1.2) }))}>−</button>
+          </div>
+        </div>
+
+        <div className={"rel-list" + (listOpen ? "" : " collapsed")}>
+          <div className="rel-list-head">
+            <span>// PROFILES</span><span className="bar" />
+            <span style={{ color: "var(--dim)", fontSize: 9 }}>{totalVisible}/{profiles.length}</span>
+          </div>
+          <div className="rel-list-body">
+            {profiles.map((p) => {
+              const hidden = hiddenIds.has(p.id);
+              return (
+                <div key={p.id} className={"rel-list-row" + (hidden ? " faded" : "")}>
+                  <div className="rl-init">{initials(p)}</div>
+                  <div>
+                    <div className="rl-name">{p.firstName} {p.lastName}</div>
+                    <div className="rl-id">{p.id}</div>
+                  </div>
+                  <button className="rl-eye" onClick={() => toggleHidden(p.id)} title={hidden ? "Show" : "Hide"}>
+                    {hidden ? "○" : "●"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="rel-list-foot">
+            <button onClick={showAll}>SHOW ALL</button>
+            <button onClick={hideAll}>HIDE ALL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // APP
 // ============================================================
 function App() {
@@ -3875,6 +4403,7 @@ function App() {
   const [mapOpen, setMapOpen] = useState(false);
   const [mapFocusId, setMapFocusId] = useState(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
+  const [relOpen, setRelOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [field, setField] = useState("all");
   const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
@@ -4230,6 +4759,9 @@ function App() {
               <button className="ctrl-btn" onClick={() => { setMapFocusId(null); setMapOpen(true); }}>
                 [ MAP ]
               </button>
+              <button className="ctrl-btn" onClick={() => setRelOpen(true)}>
+                [ RELATIONSHIPS ]
+              </button>
               <button className="ctrl-btn" onClick={pickDirectory}>
                 {dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
               </button>
@@ -4335,6 +4867,13 @@ function App() {
           count={profiles.length}
           onConfirm={onPurgeConfirm}
           onClose={() => setPurgeOpen(false)}
+        />
+      )}
+      {relOpen && (
+        <RelationshipsModal
+          profiles={classifiedMode ? profiles : profiles.filter((p) => !p.classified)}
+          onClose={() => setRelOpen(false)}
+          onSelect={(p) => { setRelOpen(false); setOpenProfile(p); }}
         />
       )}
       {toast && <div className="toast">{toast}</div>}
