@@ -368,7 +368,7 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto auto 1fr auto;
     background:
       linear-gradient(180deg, rgba(0,40,20,0.15), transparent 30%),
       var(--bg);
@@ -376,7 +376,7 @@
   .stage-head {
     display: grid;
     grid-template-columns: 1fr auto;
-    padding: 14px 22px 6px 22px;
+    padding: 7px 22px 4px 22px;
     align-items: end;
     gap: 18px;
   }
@@ -1058,9 +1058,9 @@
     grid-template-columns: minmax(220px, 1fr) auto auto;
     align-items: center;
     gap: 14px;
-    padding: 6px 22px 10px 22px;
+    padding: 3px 22px 5px 22px;
     border-bottom: 1px dashed var(--line);
-    margin-bottom: 6px;
+    margin-bottom: 3px;
   }
   .search-strip .input-wrap { padding: 6px 10px; }
   .search-strip .strip-chips {
@@ -1971,7 +1971,29 @@
 
     /* statusbar — wrap small */
     .statusbar { flex-direction: column; align-items: flex-start; font-size: 9.5px; gap: 4px; padding: 8px 12px; }
+
+    /* map: remove top-left info overlay */
+    .map-overlay-tl { display: none; }
   }
+
+  /* map list toggle button */
+  .list-toggle {
+    background: transparent;
+    border: none;
+    color: var(--grn-3);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+    padding: 0;
+    text-transform: uppercase;
+    transition: color 0.12s;
+  }
+  .list-toggle:hover { color: var(--grn-0); }
+
+  /* map: list panel collapses to header only when hidden */
+  .map-list.hidden .lbody { display: none; }
+  .map-list.hidden { grid-template-rows: auto; bottom: auto; }
 </style>
 </head>
 <body>
@@ -3156,6 +3178,7 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
   const [unresolved, setUnresolved] = useState([]); // profiles whose addresses returned no hit
   const [zoom, setZoom] = useState(2);
   const [locStatus, setLocStatus] = useState("pending"); // pending|granted|denied|unavailable
+  const [listOpen, setListOpen] = useState(true);
 
   // ESC to close
   useEffect(() => {
@@ -3429,10 +3452,15 @@ function MapModal({ profiles, onClose, onSelect, focusId }) {
           <div ref={mapDivRef} style={{ position: "absolute", inset: 0 }} />
 
           {/* node list overlay */}
-          <div className="map-list">
+          <div className={"map-list" + (listOpen ? "" : " hidden")}>
             <div className="lhead">
               <span>// NODES // WORLD</span>
-              <span>{pins.length.toString().padStart(2, "0")} / {(pins.length + unresolved.length).toString().padStart(2, "0")}</span>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span>{pins.length.toString().padStart(2, "0")} / {(pins.length + unresolved.length).toString().padStart(2, "0")}</span>
+                <button className="list-toggle" onClick={() => setListOpen((o) => !o)} title={listOpen ? "hide list" : "show list"}>
+                  {listOpen ? "▲ HIDE" : "▼ SHOW"}
+                </button>
+              </div>
             </div>
             <div className="lbody">
               {pins.length === 0 && unresolved.length === 0 && (
