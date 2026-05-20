@@ -1,0 +1,157 @@
+[
+  {
+    "id": "P-0xA1F",
+    "firstName": "Ines",
+    "lastName": "Volkov",
+    "dob": "1991-03-14",
+    "ethnicity": "Eastern European",
+    "sex": "F",
+    "address": "Apt 7C, Petrohradska 22, Praha 10",
+    "description": "Penetration tester. Former black-hat ops, currently consulting under NDA. Speaks Czech, Russian, English. Known associates flagged in three jurisdictions. Prefers off-grid comms; rotates devices every 14 days.",
+    "image": "ines_volkov.jpg",
+    "poi": true,
+    "relationships": [
+      { "type": "coworker", "name": "Lukas Hartmann", "refId": "P-0xF55" }
+    ],
+    "contacts": [
+      { "type": "signal", "value": "+420 776 31••••" },
+      { "type": "email", "value": "i.volkov@protonmail.com" },
+      { "type": "keybase", "value": "@ines_v" }
+    ]
+  },
+  {
+    "id": "P-0xB22",
+    "firstName": "Daichi",
+    "lastName": "Okafor",
+    "dob": "1985-11-02",
+    "ethnicity": "Mixed (Japanese / Nigerian)",
+    "sex": "M",
+    "address": "Block 14, Marina Heights, Lagos",
+    "description": "Hardware reverse engineer. Built and sold three SDR rigs traced through gray markets in Shenzhen. Quiet operator. No social presence after 2019.",
+    "image": "daichi_okafor.jpg",
+    "relationships": [
+      { "type": "associate", "name": "Yuki Takeda", "refId": "P-0xE3B" }
+    ],
+    "contacts": [
+      { "type": "email", "value": "d.okafor@tutanota.com" },
+      { "type": "telegram", "value": "@daich1_o" }
+    ]
+  },
+  {
+    "id": "P-0xC07",
+    "firstName": "Mireille",
+    "lastName": "Sandoval",
+    "dob": "1997-07-28",
+    "ethnicity": "Latina",
+    "sex": "F",
+    "address": "Calle 5 No. 412, Polanco, CDMX",
+    "description": "Smart-contract auditor. Disclosed two 8-figure DeFi vulns in 2024. Operates solo. Pays in mixed XMR/USDC. Travels under three known passports.",
+    "image": "mireille_sandoval.jpg",
+    "relationships": [
+      { "type": "coworker", "name": "Daichi Okafor", "refId": "P-0xB22" }
+    ],
+    "contacts": [
+      { "type": "x", "value": "@mireille_sec" },
+      { "type": "github", "value": "mireille-s" },
+      { "type": "email", "value": "mire@audits.eth" },
+      { "type": "signal", "value": "+52 55 41•• ••••" }
+    ]
+  },
+  {
+    "id": "P-0xD18",
+    "firstName": "Samir",
+    "lastName": "El-Hashem",
+    "dob": "1979-05-09",
+    "ethnicity": "Levantine Arab",
+    "sex": "M",
+    "address": "Rue Hamra 88, Beirut",
+    "description": "Logistics. Moves equipment and credentials across MENA. Affiliated, loosely, with two carding rings. Drives a 2008 silver Hilux.",
+    "image": "samir_el_hashem.jpg",
+    "hidden": true,
+    "relationships": [
+      { "type": "associate", "name": "Lukas Hartmann", "refId": "P-0xF55" }
+    ],
+    "contacts": [
+      { "type": "phone", "value": "+961 3 ••• 422" },
+      { "type": "telegram", "value": "@samir.hsh" }
+    ]
+  },
+  {
+    "id": "P-0xE3B",
+    "firstName": "Yuki",
+    "lastName": "Takeda",
+    "dob": "2001-12-19",
+    "ethnicity": "Japanese",
+    "sex": "NB",
+    "address": "5-12-3 Shimokitazawa, Setagaya, Tokyo",
+    "description": "Wallpaper crew. Front-end for several anonymized leak markets. Goes by handle 'koto_'. Active on IRC, dormant on web. Never appears on camera.",
+    "image": "yuki_takeda.jpg",
+    "classified": true,
+    "contacts": [
+      { "type": "irc", "value": "koto_ @ rizon" },
+      { "type": "discord", "value": "koto_#9931" },
+      { "type": "email", "value": "koto@cock.li" }
+    ]
+  },
+  {
+    "id": "P-0xF54",
+    "firstName": "Aaliyah",
+    "lastName": "Brooks",
+    "dob": "1993-08-21",
+    "ethnicity": "African American",
+    "sex": "F",
+    "address": "1411 Brannan St #4, San Francisco, CA",
+    "description": "Red team lead at undisclosed firm. Speaker circuit (DEF CON, Recon). Owns a registered firearm. Drives EV. Recent OSINT trail: clean.",
+    "image": "aaliyah_brooks.jpg",
+    "poi": true,
+    "relationships": [
+      { "type": "friend", "name": "Priya Ranganathan", "refId": "P-0x166" }
+    ],
+    "contacts": [
+      { "type": "x", "value": "@aaliyah_redt" },
+      { "type": "linkedin", "value": "in/aaliyah-brooks" },
+      { "type": "email", "value": "aaliyah@undsc.dev" },
+      { "type": "website", "value": "https://undsc.dev" }
+    ]
+  },
+  {
+    "id": "P-0xF55",
+    "firstName": "Lukas",
+    "lastName": "Hartmann",
+    "dob": "1972-01-30",
+    "ethnicity": "Germanic",
+    "sex": "M",
+    "address": "Kantstraße 102, 10625 Berlin",
+    "description": "Former intelligence. Currently fixer-class consultant. Speaks six languages well, two more passable. Pays for nothing in cash. Known to wear vintage Casio F-91W.",
+    "image": "lukas_hartmann.jpg",
+    "poi": true,
+    "relationships": [
+      { "type": "coworker", "name": "Ines Volkov", "refId": "P-0xA1F" },
+      { "type": "associate", "name": "Samir El-Hashem", "refId": "P-0xD18" }
+    ],
+    "contacts": [
+      { "type": "signal", "value": "+49 151 •• ••• 12" },
+      { "type": "email", "value": "lh.consult@mailbox.org" }
+    ]
+  },
+  {
+    "id": "P-0x166",
+    "firstName": "Priya",
+    "lastName": "Ranganathan",
+    "dob": "1996-04-11",
+    "ethnicity": "South Asian",
+    "sex": "F",
+    "address": "Indira Nagar, 5th Cross, Bengaluru 560038",
+    "description": "ML researcher with a side in adversarial attacks against vision models. Published under pseudonym. Maintains three github accounts. Two dogs.",
+    "image": "priya_ranganathan.jpg",
+    "relationships": [
+      { "type": "friend", "name": "Aaliyah Brooks", "refId": "P-0xF54" }
+    ],
+    "contacts": [
+      { "type": "github", "value": "priyar-adv" },
+      { "type": "x", "value": "@priyar_ml" },
+      { "type": "email", "value": "priya@granular.lab" },
+      { "type": "website", "value": "https://granular.lab" }
+    ]
+  }
+]
