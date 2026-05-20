@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>//PERSONA_DB</title>
+<title>PERSONA_DB</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -4042,6 +4042,68 @@ function PurgeModal({ count, onConfirm, onClose }) {
 }
 
 // ============================================================
+// RESTORE CONFIRM MODAL
+// ============================================================
+function RestoreModal({ count, onConfirm, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-veil" onMouseDown={(e) => { if (e.target.classList.contains("modal-veil")) onClose(); }}>
+      <div className="modal" style={{ width: "min(520px, 100%)" }}>
+        <div className="modal-head">
+          <div className="tag" style={{ borderColor: "var(--red)", color: "var(--red)" }}>WARN</div>
+          <h3 style={{ color: "var(--red)" }}>&gt; <span style={{ letterSpacing: "0.22em" }}>RESTORE :: PURGE EXISTING</span></h3>
+          <button className="ctrl-btn" onClick={onClose}>✕ ESC</button>
+        </div>
+
+        <div style={{ padding: "28px 28px 20px 28px", display: "grid", gap: 18 }}>
+          <div style={{
+            border: "1px solid rgba(255,51,85,0.45)",
+            background: "rgba(255,51,85,0.06)",
+            padding: "14px 16px",
+            display: "grid",
+            gap: 8,
+          }}>
+            <div style={{ color: "var(--red)", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", fontSize: 12 }}>
+              ⚠ &nbsp;WARNING: EXISTING DATA WILL BE PURGED
+            </div>
+            <div style={{ color: "var(--txt)", fontSize: 12.5, lineHeight: 1.65 }}>
+              This will permanently delete <span style={{ color: "var(--red)", fontWeight: 700 }}>{count} record{count !== 1 ? "s" : ""}</span> from the database
+              and replace them with records from the selected .json file.
+            </div>
+            <div style={{ color: "var(--dim)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              // this action cannot be undone — backup first if needed
+            </div>
+          </div>
+
+          <div style={{ color: "var(--dim)", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+            Confirm to select a .json backup file:
+          </div>
+        </div>
+
+        <div className="modal-foot">
+          <div className="foot-hint" style={{ color: "var(--red)", letterSpacing: "0.14em" }}>
+            {count} record{count !== 1 ? "s" : ""} will be replaced
+          </div>
+          <div className="foot-actions">
+            <button className="ctrl-btn" onClick={onClose}>↩ ABORT</button>
+            <button
+              className="ctrl-btn danger"
+              style={{ background: "var(--red)", color: "#fff", borderColor: "var(--red)", boxShadow: "0 0 14px rgba(255,51,85,0.4)" }}
+              onClick={onConfirm}
+            >⇪ SELECT FILE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // RELATIONSHIPS GRAPH MODAL
 // ============================================================
 
@@ -5208,6 +5270,8 @@ function App() {
   const [mapOpen, setMapOpen] = useState(false);
   const [mapFocusId, setMapFocusId] = useState(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const restoreRef = useRef(null);
   const [relOpen, setRelOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [field, setField] = useState("all");
@@ -5576,6 +5640,42 @@ function App() {
     showToast(`> purge complete :: ${count} record(s) deleted`);
   };
 
+  const handleBackup = () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const dt = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const filename = `persona_db_${dt}.json`;
+    downloadJSON(profiles, filename);
+    showToast(`> backup saved :: ${filename}`);
+  };
+
+  const handleRestoreConfirm = () => {
+    setRestoreOpen(false);
+    restoreRef.current && restoreRef.current.click();
+  };
+
+  const handleRestoreFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const arr = Array.isArray(data) ? data : [];
+        setProfiles(arr);
+        setOpenProfile(null);
+        setIndex(0);
+        setQuery("");
+        setField("all");
+        showToast(`> restore complete :: ${arr.length} record(s) loaded`);
+      } catch (_) {
+        showToast("> restore failed :: invalid json");
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
   // override resolve to also use embedded imageData when present
   const cardResolve = useCallback((imageRef) => {
     return resolve(imageRef);
@@ -5633,6 +5733,9 @@ function App() {
                 {dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
               </button>
               <button className="ctrl-btn" onClick={onImportDemo}>DEMO</button>
+              <input ref={restoreRef} type="file" accept=".json,application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
+              <button className="ctrl-btn" onClick={() => setRestoreOpen(true)}>⇩ RESTORE</button>
+              <button className="ctrl-btn" onClick={handleBackup}>⇧ BACKUP</button>
               <button className="ctrl-btn primary" onClick={onNew}>+ NEW</button>
               <button className="ctrl-btn danger" onClick={() => setPurgeOpen(true)}>⚠ PURGE</button>
             </div>
@@ -5735,6 +5838,13 @@ function App() {
           count={profiles.length}
           onConfirm={onPurgeConfirm}
           onClose={() => setPurgeOpen(false)}
+        />
+      )}
+      {restoreOpen && (
+        <RestoreModal
+          count={profiles.length}
+          onConfirm={handleRestoreConfirm}
+          onClose={() => setRestoreOpen(false)}
         />
       )}
       {relOpen && (
