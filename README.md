@@ -44,10 +44,18 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 - A side list panel shows all mapped profiles; clicking one flies the map to that pin.
 - Custom zoom controls and a cyberpunk-styled Leaflet skin (dark tiles, green markers).
 
+### Toolbar
+- **[ MAP ]** — opens the world map.
+- **[ RELATIONSHIPS ]** — opens the relationship graph.
+- **LINK IMG FOLDER / RE-LINK FOLDER** — attach a local image directory.
+- **DEMO** — loads the eight bundled demo personas into the database. Skips any profiles whose IDs already exist, so it is safe to run on a non-empty database.
+- **+ NEW** — opens the profile creation form.
+- **⚠ PURGE** — wipes all records, leaving an empty database.
+
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
 - Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `help`/`?`.
-- Hidden commands: `classified <enable|disable|on|off>` toggles classified mode; a separate hidden command wipes all data and resets to seed data (UI purge button also available).
+- Hidden commands: `classified <enable|disable|on|off>` toggles classified mode; a separate hidden command purges all data.
 
 ### Image Directory
 - Point the app at a local folder of images via the **File System Access API** (Chromium) or a fallback `<input webkitdirectory>` picker.
@@ -60,11 +68,12 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 - Geocode results are cached separately under `personaDB::geocode::v1`.
 - **Export**: individual profiles can be downloaded as JSON from the detail modal.
 - **Import**: the edit/create form accepts a JSON paste to pre-populate fields.
-- A **Purge** button in the UI wipes all user-created records and resets to seed data.
+- The app starts with an empty database. Use the **DEMO** button to load the bundled example profiles.
+- **⚠ PURGE** wipes all records and leaves the database empty.
 
-## Seed Data
+## Demo Data
 
-Eight fictional personas are bundled as seed data and loaded on first run (or after a purge). They demonstrate all supported fields including relationships, contacts, POI status, and classified status.
+Eight fictional personas are included as demo data (inlined in `index.html`, also available as `demo.json`). Click **DEMO** in the toolbar to load them. They cover all supported fields: relationships, contacts, POI/hidden/classified flags.
 
 ## Stack
 
