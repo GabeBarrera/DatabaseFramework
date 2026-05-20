@@ -789,6 +789,32 @@
   }
   .portrait-meta b { color: var(--grn-1); font-weight: 600; }
 
+  /* DECEASED red X overlay */
+  .deceased-x {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0,0,0,0.18);
+    z-index: 4;
+    pointer-events: none;
+  }
+  .deceased-x::before,
+  .deceased-x::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--red);
+    opacity: 0.72;
+    height: 5px;
+    top: 50%; left: 8%; right: 8%;
+    width: 84%;
+    transform-origin: center;
+    border-radius: 2px;
+  }
+  .deceased-x::before { transform: translateY(-50%) rotate(45deg); }
+  .deceased-x::after  { transform: translateY(-50%) rotate(-45deg); }
+
   /* CLASSIFIED red stamp overlay */
   .classified-tape {
     position: absolute;
@@ -2606,6 +2632,7 @@ function ProfileCard({ profile, position, isCenter, onClick, resolveImg }) {
             <div className="stamp">CLASSIFIED</div>
           </div>
         )}
+        {profile.status === "deceased" && <div className="deceased-x" />}
       </div>
       <div className="card-body">
         <div className="card-name">
@@ -2817,6 +2844,7 @@ function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap, onEdit
                   <div className="stamp">CLASSIFIED</div>
                 </div>
               )}
+              {profile.status === "deceased" && <div className="deceased-x" />}
             </div>
             <div className="portrait-meta">
               <span>FILE</span>
@@ -2863,29 +2891,27 @@ function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap, onEdit
                 <div className="v">{fmtDate(profile.dob)} <span className="dim">/ AGE {ageFrom(profile.dob)}</span></div>
               </div>
               <div className="field">
-                <span className="k">Sex</span>
-                <div className="v">{sexLong(profile.sex)}</div>
+                <span className="k">Status</span>
+                <div className="v" style={profile.status === "deceased" ? { color: "var(--red)" } : profile.status === "alive" ? { color: "var(--grn-1)" } : {}}>
+                  {profile.status ? profile.status.toUpperCase() : "—"}
+                </div>
               </div>
               <div className="field">
                 <span className="k">Ethnicity</span>
                 <div className="v">{profile.ethnicity || "—"}</div>
               </div>
               <div className="field">
+                <span className="k">Sex</span>
+                <div className="v">{sexLong(profile.sex)}</div>
+              </div>
+              <div className="field">
+                <span className="k">Country</span>
+                <div className="v">{profile.country || "—"}</div>
+              </div>
+              <div className="field">
                 <span className="k">Reference ID</span>
                 <div className="v">{profile.id}</div>
               </div>
-              <div className="field">
-                <span className="k">Status</span>
-                <div className="v" style={profile.status === "deceased" ? { color: "var(--red)" } : profile.status === "alive" ? { color: "var(--grn-1)" } : {}}>
-                  {profile.status ? profile.status.toUpperCase() : "—"}
-                </div>
-              </div>
-              {profile.country && (
-                <div className="field">
-                  <span className="k">Country</span>
-                  <div className="v">{profile.country}</div>
-                </div>
-              )}
               <div className="field full">
                 <span className="k">Address</span>
                 <div className="v">
