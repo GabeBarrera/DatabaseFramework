@@ -3057,8 +3057,6 @@ function NewEntryModal({ onClose, onSave, initial }) {
     const errs = {};
     if (!form.firstName.trim()) errs.firstName = "required";
     if (!form.lastName.trim()) errs.lastName = "required";
-    if (!form.dob) errs.dob = "required";
-    if (!form.sex) errs.sex = "required";
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
@@ -3143,14 +3141,14 @@ function NewEntryModal({ onClose, onSave, initial }) {
               {errors.lastName && <div className="err">[ {errors.lastName} ]</div>}
             </div>
             <div className="row">
-              <label>Date of Birth <span className="req">*</span></label>
+              <label>Date of Birth</label>
               <div className="input-wrap"><span className="pfx">&gt;</span>
                 <input type="date" value={form.dob} onChange={(e) => set("dob", e.target.value)} />
               </div>
               {errors.dob && <div className="err">[ {errors.dob} ]</div>}
             </div>
             <div className="row">
-              <label>Sex <span className="req">*</span></label>
+              <label>Sex</label>
               <div className="input-wrap"><span className="pfx">&gt;</span>
                 <select value={form.sex} onChange={(e) => set("sex", e.target.value)}>
                   <option value="">[ select ]</option>
@@ -4834,11 +4832,26 @@ function App() {
           { kind: "cmd-row", cmd: "echo <text>",  desc: "prints the argument" },
           { kind: "cmd-row", cmd: "clear",        desc: "clear the terminal scrollback" },
           { kind: "cmd-row", cmd: "version",      desc: "prints version" },
-          { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" }
+          { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" },
+          { kind: "cmd-row", cmd: "download <name|id>", desc: "download a profile as .json" }
         ];
       case "purge":
         setPurgeOpen(true);
         return { kind: "acc", text: "⚠ purge confirmation required — confirm in the modal." };
+      case "download": {
+        if (!args) return { kind: "err", text: "usage: download <name|id>" };
+        const q = args.toLowerCase();
+        const target = profiles.find((p) =>
+          (p.id || "").toLowerCase() === q ||
+          (`${p.firstName} ${p.lastName}`).toLowerCase() === q ||
+          p.firstName.toLowerCase() === q ||
+          p.lastName.toLowerCase() === q
+        );
+        if (!target) return { kind: "err", text: `no match :: "${args}"` };
+        const safe = (`${target.firstName}_${target.lastName}`).replace(/\s+/g, "_");
+        downloadJSON(target, `${safe}_${target.id}.json`);
+        return `> downloading :: ${safe}_${target.id}.json`;
+      }
       case "clear":
       case "cls":
         return "__clear__";

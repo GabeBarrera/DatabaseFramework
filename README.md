@@ -5,7 +5,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 ## Features
 
 ### Profile Management
-- **Create, edit, and delete** fictional persona records. Required fields: first name, last name, date of birth, and sex. Optional fields: ethnicity, address, description, and profile image.
+- **Create, edit, and delete** fictional persona records. Required fields: first name and last name. Optional fields: date of birth, sex, ethnicity, address, description, and profile image.
 - **Sex options**: M, F, NB, X.
 - **Contacts**: attach multiple contact methods per profile — email, phone, Signal, Telegram, Discord, X, Instagram, GitHub, LinkedIn, IRC, Keybase, Matrix, Session, XMPP, website, and other.
 - **Relationships**: link profiles to one another with a labeled relationship type (friend, spouse, colleague, rival, etc.).
@@ -54,7 +54,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
-- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `purge`, `help`/`?`.
+- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `download <name|id>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `purge`, `help`/`?`.
 - Hidden commands: `classified <enable|disable|on|off>` toggles classified mode.
 
 ### Image Directory
