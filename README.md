@@ -5,8 +5,10 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 ## Features
 
 ### Profile Management
-- **Create, edit, and delete** fictional persona records. Required fields: first name and last name. Optional fields: date of birth, sex, ethnicity, address, description, and profile image.
+- **Create, edit, and delete** fictional persona records. Required fields: first name and last name. Optional fields: date of birth, sex, ethnicity, address, country, status, description, and profile image.
 - **Sex options**: M, F, NB, X.
+- **Country**: auto-detected from the address field via Nominatim geocoding. If a country is entered manually but the address points to a different country, the address always takes precedence and overwrites the manual entry. Updates automatically whenever the address changes.
+- **Status**: marks a profile as `Alive` or `Deceased`. Displayed color-coded on the profile card (green / red) and in the detail modal.
 - **Contacts**: attach multiple contact methods per profile — email, phone, Signal, Telegram, Discord, X, Instagram, GitHub, LinkedIn, IRC, Keybase, Matrix, Session, XMPP, website, and other.
 - **Relationships**: link profiles to one another with a labeled relationship type (friend, spouse, colleague, rival, etc.).
 - **POI flag**: mark a profile as a Person of Interest — POI entries sort to the top of the carousel alphabetically.
@@ -59,7 +61,8 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
   - **Queries**: *"who has a birthday in May"*, *"find people who identify as hackers"*, *"who lives in Berlin"*, *"tell me about Lukas"*, *"who is over 40"*, *"who has Signal"*, *"who is a POI"*
   - **Relationship linking**: *"Josh is Kevin's parent"*, *"Josh is the parent of Kevin"*, *"Josh and Kevin are friends"*, *"link Josh and Kevin as rivals"* — creates bidirectional links with the correct reverse type (parent↔child, boss↔subordinate, mentor↔mentee, etc.)
   - **Relationship unlinking**: *"delete the relationship between Josh and Kevin"*, *"unlink Josh and Kevin"*, *"remove Josh's relationship with Kevin"*
-  - **Field updates**: *"set Josh's description to …"*, *"update address for Priya to …"*, *"Josh's notes is now …"*
+  - **Field updates**: *"set Josh's description to …"*, *"update address for Priya to …"*, *"Josh's notes is now …"* — updating the address also triggers a country re-geocode
+  - **Status updates**: *"Josh is dead"*, *"mark Priya as deceased"*, *"Josh is alive"*, *"set Josh's status to alive"*
   - **Field clearing**: *"delete Josh's birthday"*, *"delete birthday in Josh"*, *"clear Josh's address"* — first name and last name cannot be cleared
   - **Profile deletion**: *"delete Josh"* or *"delete profile Josh"* — prompts for confirmation (`confirm` / `cancel`) before removing
   - **Profile creation**: *"add Kevin Bacon"* or *"create Kevin Bacon"* — creates a new profile instantly. If only one name is given (e.g. *"add Kevin"*), the terminal asks whether it is a first or last name; the other field is stored as `[unknown]` and highlighted in red in the output
@@ -73,7 +76,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ### Data Persistence
 - All profiles are stored in `localStorage` under the key `personaDB::v3`.
-- Geocode results are cached separately under `personaDB::geocode::v1`.
+- Geocode results are cached separately under `personaDB::geocode::v2` (includes country data).
 - **Export**: individual profiles can be downloaded as JSON from the detail modal.
 - **Import**: the edit/create form accepts a JSON paste to pre-populate fields.
 - The app starts with an empty database. Use the **DEMO** button to load the bundled example profiles.
@@ -81,7 +84,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ## Demo Data
 
-Eight fictional personas are included as demo data (inlined in `index.html`, also available as `demo.json`). Click **DEMO** in the toolbar to load them. They cover all supported fields: relationships, contacts, POI/hidden/classified flags.
+Eight fictional personas are included as demo data (inlined in `index.html`, also available as `demo.json`). Click **DEMO** in the toolbar to load them. They cover all supported fields: relationships, contacts, POI/hidden/classified flags, country (auto-geocoded from address), and status.
 
 ## Stack
 

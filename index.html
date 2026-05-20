@@ -2306,7 +2306,9 @@ function normalizeProfile(p) {
     relationships: Array.isArray(p.relationships) ? p.relationships : [],
     poi: !!p.poi,
     hidden: !!p.hidden,
-    classified: !!p.classified
+    classified: !!p.classified,
+    country: p.country || "",
+    status: p.status || "",
   };
 }
 function loadProfiles() {
@@ -2403,7 +2405,7 @@ const RELATIONSHIP_TYPES = [
 // ============================================================
 // GEOCODE — Nominatim (OpenStreetMap) with localStorage cache + rate-limit queue
 // ============================================================
-const GEOCODE_LS_KEY = "personaDB::geocode::v1";
+const GEOCODE_LS_KEY = "personaDB::geocode::v2";
 let _geocodeCache = (() => {
   try { return JSON.parse(localStorage.getItem(GEOCODE_LS_KEY) || "{}"); }
   catch (e) { return {}; }
@@ -2424,7 +2426,7 @@ function geocodeOSM(address) {
     if (Object.prototype.hasOwnProperty.call(_geocodeCache, key)) return _geocodeCache[key];
     await new Promise((r) => setTimeout(r, 1100)); // respect 1 req/sec limit
     try {
-      const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&q=" + encodeURIComponent(address);
+      const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=" + encodeURIComponent(address);
       const resp = await fetch(url, { headers: { "Accept": "application/json" } });
       if (!resp.ok) throw new Error("nominatim " + resp.status);
       const arr = await resp.json();
@@ -2432,7 +2434,8 @@ function geocodeOSM(address) {
       const result = top ? {
         lat: parseFloat(top.lat),
         lng: parseFloat(top.lon),
-        display: top.display_name || address
+        display: top.display_name || address,
+        country: (top.address && top.address.country) || ""
       } : null;
       _geocodeCache[key] = result;
       _saveGeocodeCache();
@@ -2613,6 +2616,14 @@ function ProfileCard({ profile, position, isCenter, onClick, resolveImg }) {
           <div className="k">ETHN</div><div className="v">{profile.ethnicity || "—"}</div>
           <div className="k">SEX</div><div className="v">{sexLong(profile.sex)}</div>
           <div className="k">REF</div><div className="v">{profile.id}</div>
+          {profile.status === "deceased" && <>
+            <div className="k" style={{ color: "var(--red)" }}>STATUS</div>
+            <div className="v" style={{ color: "var(--red)" }}>DECEASED</div>
+          </>}
+          {profile.status === "alive" && <>
+            <div className="k" style={{ color: "var(--grn-1)" }}>STATUS</div>
+            <div className="v" style={{ color: "var(--grn-1)" }}>ALIVE</div>
+          </>}
         </div>
       </div>
     </div>
@@ -2863,6 +2874,18 @@ function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap, onEdit
                 <span className="k">Reference ID</span>
                 <div className="v">{profile.id}</div>
               </div>
+              <div className="field">
+                <span className="k">Status</span>
+                <div className="v" style={profile.status === "deceased" ? { color: "var(--red)" } : profile.status === "alive" ? { color: "var(--grn-1)" } : {}}>
+                  {profile.status ? profile.status.toUpperCase() : "—"}
+                </div>
+              </div>
+              {profile.country && (
+                <div className="field">
+                  <span className="k">Country</span>
+                  <div className="v">{profile.country}</div>
+                </div>
+              )}
               <div className="field full">
                 <span className="k">Address</span>
                 <div className="v">
@@ -2979,7 +3002,9 @@ function NewEntryModal({ onClose, onSave, initial }) {
     sex: initial ? initial.sex || "" : "",
     address: initial ? initial.address || "" : "",
     description: initial ? initial.description || "" : "",
-    image: initial ? initial.image || "" : "" // filename
+    image: initial ? initial.image || "" : "",
+    country: initial ? initial.country || "" : "",
+    status: initial ? initial.status || "" : ""
   });
   const [imgPreview, setImgPreview] = useState(initial && initial.imageData ? initial.imageData : null); // data URL
   const [errors, setErrors] = useState({});
@@ -3009,7 +3034,9 @@ function NewEntryModal({ onClose, onSave, initial }) {
           sex: data.sex || "",
           address: data.address || "",
           description: data.description || "",
-          image: data.image || ""
+          image: data.image || "",
+          country: data.country || "",
+          status: data.status || ""
         });
         if (data.imageData) setImgPreview(data.imageData);
         if (Array.isArray(data.contacts)) setContacts(data.contacts.map((c) => ({ ...c })));
@@ -3081,6 +3108,8 @@ function NewEntryModal({ onClose, onSave, initial }) {
       address: form.address.trim(),
       description: form.description.trim(),
       image: form.image || "",
+      country: form.country.trim(),
+      status: form.status,
       contacts: cleanContacts,
       relationships: cleanRelationships,
       poi: !!flags.poi,
@@ -3160,6 +3189,16 @@ function NewEntryModal({ onClose, onSave, initial }) {
               </div>
               {errors.sex && <div className="err">[ {errors.sex} ]</div>}
             </div>
+            <div className="row">
+              <label>Status</label>
+              <div className="input-wrap"><span className="pfx">&gt;</span>
+                <select value={form.status} onChange={(e) => set("status", e.target.value)}>
+                  <option value="">[ unknown ]</option>
+                  <option value="alive">Alive</option>
+                  <option value="deceased">Deceased</option>
+                </select>
+              </div>
+            </div>
             <div className="row full">
               <label>Ethnicity</label>
               <div className="input-wrap"><span className="pfx">&gt;</span>
@@ -3170,6 +3209,12 @@ function NewEntryModal({ onClose, onSave, initial }) {
               <label>Address</label>
               <div className="input-wrap"><span className="pfx">&gt;</span>
                 <input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="last known location" />
+              </div>
+            </div>
+            <div className="row full">
+              <label>Country <span style={{ color: "var(--dim)", fontSize: 10, letterSpacing: "0.1em" }}>auto-detected from address</span></label>
+              <div className="input-wrap"><span className="pfx">&gt;</span>
+                <input value={form.country} onChange={(e) => set("country", e.target.value)} placeholder="e.g. Germany" />
               </div>
             </div>
             <div className="row full">
@@ -4706,6 +4751,8 @@ const FIELD_ALIASES = {
   "sex": "sex", "gender": "sex",
   "address": "address", "location": "address", "home": "address",
   "description": "description", "notes": "description", "bio": "description", "about": "description", "info": "description",
+  "country": "country",
+  "status": "status", "vitals": "status",
 };
 
 function interpretChat(query, profiles, pending) {
@@ -4727,6 +4774,7 @@ function interpretChat(query, profiles, pending) {
     const newProfile = {
       id, firstName, lastName,
       dob: "", ethnicity: "", sex: "", address: "", description: "", image: "",
+      country: "", status: "",
       contacts: [], relationships: [], poi: false, hidden: false, classified: false,
     };
     const lines = [{ kind: "acc", text: `> created :: ${firstName} ${lastName}  [${id}]` }];
@@ -4804,6 +4852,8 @@ function interpretChat(query, profiles, pending) {
       "  delete relationship between [A] and [B] — removes link from both sides",
       "  unlink [name] and [name]                — same as above",
       "  [name]'s relationship with [name]       — remove specific link",
+      "  [name] is dead / died / passed away      — marks status as deceased",
+      "  [name] is alive                          — marks status as alive",
       "  set [name]'s [field] to [value]         — e.g. set josh's description to ...",
       "  update [field] for [name] to [value]",
       "  [name]'s [field] is now [value]",
@@ -4969,17 +5019,23 @@ function interpretChat(query, profiles, pending) {
   const QUESTION_WORDS = /^(who|what|which|where|when|how|is|are|do|does|did|will|would|can|could|should)$/;
   const applyFieldUpdate = (nameRaw, fieldRaw, value) => {
     const fieldKey = FIELD_ALIASES[fieldRaw.trim().toLowerCase()];
-    if (!fieldKey) return { lines: [{ kind: "err", text: `> unknown field :: "${fieldRaw.trim()}" — valid: firstName, lastName, dob, sex, ethnicity, address, description` }] };
+    if (!fieldKey) return { lines: [{ kind: "err", text: `> unknown field :: "${fieldRaw.trim()}" — valid: firstName, lastName, dob, sex, ethnicity, address, country, status, description` }] };
     const p = findProfile(nameRaw.trim());
     if (!p) return { lines: [{ kind: "err", text: `> profile not found :: "${nameRaw.trim()}"` }] };
-    const updated = { ...p, [fieldKey]: value.trim() };
-    return {
+    let normalized = value.trim();
+    if (fieldKey === "status") {
+      if (/^(dead|deceased|died|gone)$/.test(normalized)) normalized = "deceased";
+      else if (/^(alive|living)$/.test(normalized)) normalized = "alive";
+    }
+    const result = {
       lines: [
         { kind: "acc", text: `> updated :: ${p.firstName} ${p.lastName}  [${p.id}]` },
-        `  ${fieldKey} → "${value.trim()}"`,
+        `  ${fieldKey} → "${normalized}"`,
       ],
-      newProfiles: profiles.map((x) => x.id === p.id ? updated : x),
+      newProfiles: profiles.map((x) => x.id === p.id ? { ...x, [fieldKey]: normalized } : x),
     };
+    if (fieldKey === "address") result.countryRefresh = { profileId: p.id, address: normalized };
+    return result;
   };
   // set/update/change [name]'s [field] to [value]
   { const m = q.match(/^(?:set|update|change)\s+(.+?)'s\s+(.+?)\s+to\s+(.+)$/);
@@ -5055,6 +5111,16 @@ function interpretChat(query, profiles, pending) {
   // link [A] and [B] as [relType]  — "link Josh and Kevin as rivals"
   { const m = q.match(/^link\s+(.+?)\s+and\s+(.+?)\s+as\s+([\w ]+?)(?:\s*\?)?$/);
     if (m) { const r = applyRelLink(m[1], m[2], m[3]); if (r) return r; } }
+
+  // STATUS UPDATE
+  { const deceased = q.match(/^(.+?)\s+(?:is\s+)?(?:dead|deceased|died|passed away|is gone|is no longer alive)(?:\s*\?)?$/) ||
+                     q.match(/^(?:mark|set)\s+(.+?)\s+(?:as\s+)?(?:dead|deceased)(?:\s*\?)?$/);
+    if (deceased) { const p = findProfile(deceased[1].trim()); if (p) return { lines: [{ kind: "acc", text: `> status updated :: ${p.firstName} ${p.lastName}  [${p.id}]` }, "  status → deceased"], newProfiles: profiles.map((x) => x.id === p.id ? { ...x, status: "deceased" } : x) }; }
+  }
+  { const alive = q.match(/^(.+?)\s+is\s+(?:alive|living|still alive)(?:\s*\?)?$/) ||
+                  q.match(/^(?:mark|set)\s+(.+?)\s+(?:as\s+)?alive(?:\s*\?)?$/);
+    if (alive) { const p = findProfile(alive[1].trim()); if (p) return { lines: [{ kind: "acc", text: `> status updated :: ${p.firstName} ${p.lastName}  [${p.id}]` }, "  status → alive"], newProfiles: profiles.map((x) => x.id === p.id ? { ...x, status: "alive" } : x) }; }
+  }
 
   // PROFILE DELETE (with confirmation)
   { const m = q.match(/^(?:delete|remove)\s+(?:profile\s+|record\s+|user\s+)?(.+?)(?:\s*\?)?$/);
@@ -5233,6 +5299,7 @@ function App() {
       if (result.exit) { setChatMode(false); setChatPending(null); return result.lines; }
       if (result.newProfiles) setProfiles(result.newProfiles);
       if (result.pendingAction !== undefined) setChatPending(result.pendingAction);
+      if (result.countryRefresh) resolveCountry(result.countryRefresh.profileId, result.countryRefresh.address);
       return result.lines;
     }
 
@@ -5416,25 +5483,32 @@ function App() {
     showToast(msg);
   };
 
+  const resolveCountry = (profileId, address) => {
+    if (!address) return;
+    geocodeOSM(address).then((r) => {
+      if (r && r.country) {
+        setProfiles((arr) => arr.map((p) => p.id === profileId ? { ...p, country: r.country } : p));
+      }
+    });
+  };
+
   const onSaveNew = (profile, isEdit) => {
     if (isEdit) {
       setProfiles((arr) => arr.map((x) => x.id === profile.id ? profile : x));
-      // jump carousel onto the edited entry
       const i = profiles.findIndex((x) => x.id === profile.id);
       if (i >= 0) setIndex(i);
       setEditTarget(null);
-      // re-open detail with the patched record
       setOpenProfile(profile);
       showToast(`> entry patched :: ${profile.id}`);
     } else {
       setProfiles((arr) => [...arr, profile]);
       setNewOpen(false);
-      // ensure the new card is reachable — clear any active filter
       setQuery("");
       setField("all");
-      setIndex(profiles.length); // new card lands at end
+      setIndex(profiles.length);
       showToast(`> entry committed :: ${profile.id}`);
     }
+    resolveCountry(profile.id, profile.address);
   };
 
   const onEdit = (profile) => {
