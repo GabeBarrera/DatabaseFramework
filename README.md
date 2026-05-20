@@ -54,8 +54,8 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
-- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `help`/`?`.
-- Hidden commands: `classified <enable|disable|on|off>` toggles classified mode; a separate hidden command purges all data.
+- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `purge`, `help`/`?`.
+- Hidden commands: `classified <enable|disable|on|off>` toggles classified mode.
 
 ### Image Directory
 - Point the app at a local folder of images via the **File System Access API** (Chromium) or a fallback `<input webkitdirectory>` picker.

@@ -4833,8 +4833,12 @@ function App() {
           { kind: "cmd-row", cmd: "date",         desc: "current UTC timestamp" },
           { kind: "cmd-row", cmd: "echo <text>",  desc: "prints the argument" },
           { kind: "cmd-row", cmd: "clear",        desc: "clear the terminal scrollback" },
-          { kind: "cmd-row", cmd: "version",      desc: "prints version" }
+          { kind: "cmd-row", cmd: "version",      desc: "prints version" },
+          { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" }
         ];
+      case "purge":
+        setPurgeOpen(true);
+        return { kind: "acc", text: "⚠ purge confirmation required — confirm in the modal." };
       case "clear":
       case "cls":
         return "__clear__";
