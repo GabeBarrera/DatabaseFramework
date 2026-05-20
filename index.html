@@ -3986,28 +3986,129 @@ function PurgeModal({ count, onConfirm, onClose }) {
 // RELATIONSHIPS GRAPH MODAL
 // ============================================================
 
+// Relationship types that represent blood/direct family
+const FAMILY_TYPES = new Set([
+  "mother","father","parent","child","son","daughter",
+  "brother","sister","sibling",
+  "aunt","uncle","nephew","niece",
+  "grandparent","grandchild",
+  "spouse","partner","ex","cousin"
+]);
+// Relationship types that establish a parent→child link
+const PC_TYPES = new Set(["mother","father","parent","child","son","daughter"]);
+
 function buildRelGraph(profiles, hiddenIds) {
-  const visible = profiles.filter((p) => !hiddenIds.has(p.id));
+  const visible    = profiles.filter((p) => !hiddenIds.has(p.id));
   const visibleSet = new Set(visible.map((p) => p.id));
-  const edgeMap = new Map();
+
+  // ── Build parent→child maps ──────────────────────────────────────────────
+  const parentOf   = {}; // childId  → [parentId, ...]
+  const childrenOf = {}; // parentId → [childId,  ...]
+  const addPC = (parentId, childId) => {
+    if (!visibleSet.has(parentId) || !visibleSet.has(childId) || parentId === childId) return;
+    if (!parentOf[childId])    parentOf[childId]    = [];
+    if (!childrenOf[parentId]) childrenOf[parentId] = [];
+    if (!parentOf[childId].includes(parentId))    parentOf[childId].push(parentId);
+    if (!childrenOf[parentId].includes(childId))  childrenOf[parentId].push(childId);
+  };
   visible.forEach((p) => {
     (p.relationships || []).forEach((r) => {
       if (!r.refId || !visibleSet.has(r.refId)) return;
-      const key = [p.id, r.refId].sort().join("↔");
-      if (!edgeMap.has(key)) edgeMap.set(key, { source: p.id, target: r.refId, labels: new Set() });
-      if (r.type) edgeMap.get(key).labels.add(r.type.toLowerCase());
+      const t = (r.type || "").toLowerCase();
+      if (["mother","father","parent"].includes(t)) addPC(r.refId, p.id);
+      if (["child","son","daughter"].includes(t))   addPC(p.id, r.refId);
     });
   });
-  const edges = [...edgeMap.values()].map((e) => ({
-    source: e.source, target: e.target,
-    label: [...e.labels].join(" / ")
+
+  // ── Group children by shared pair of visible parents (nuclear families) ──
+  const fgMap        = {}; // "P1::P2" → { p1, p2, children: Set }
+  const childInGroup = new Set();
+  Object.entries(parentOf).forEach(([childId, parents]) => {
+    if (parents.length >= 2) {
+      const [p1, p2] = [...parents].sort();
+      const key = `${p1}::${p2}`;
+      if (!fgMap[key]) fgMap[key] = { p1, p2, children: new Set() };
+      fgMap[key].children.add(childId);
+      childInGroup.add(childId);
+    }
+  });
+  const familyGroups = Object.values(fgMap).map((fg) => ({
+    p1: fg.p1, p2: fg.p2, children: [...fg.children]
   }));
+  // Children with only one visible parent get a direct line
+  const singleParentEdges = [];
+  Object.entries(parentOf).forEach(([childId, parents]) => {
+    if (!childInGroup.has(childId)) singleParentEdges.push({ parent: parents[0], child: childId });
+  });
+
+  // ── Redundancy checks ────────────────────────────────────────────────────
+  // Suppress grandparent↔grandchild if an intermediate parent is visible
+  const isGPGCRedundant = (gpId, gcId) =>
+    (parentOf[gcId] || []).some((pId) => (parentOf[pId] || []).includes(gpId));
+
+  // Suppress cousin↔cousin if the full chain A→pA→gp→pB→B is visible
+  const isCousinRedundant = (aId, bId) => {
+    for (const pA of (parentOf[aId] || [])) {
+      for (const gp of (parentOf[pA] || [])) {
+        for (const pB of (childrenOf[gp] || [])) {
+          if (pB !== pA && (parentOf[bId] || []).includes(pB)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // ── Build social + family-direct edge lists ──────────────────────────────
+  const seen             = new Set();
+  const socialEdges      = []; // non-family connections
+  const familyDirectEdges = []; // family connections that aren't parent→child
+
+  visible.forEach((p) => {
+    (p.relationships || []).forEach((r) => {
+      if (!r.refId || !visibleSet.has(r.refId)) return;
+      const t   = (r.type || "").toLowerCase();
+      if (PC_TYPES.has(t)) return; // handled via parentOf / familyGroups
+      const key = [p.id, r.refId].sort().join("↔");
+      if (seen.has(key)) return;
+      seen.add(key);
+      if (FAMILY_TYPES.has(t)) {
+        if (t === "grandparent" && isGPGCRedundant(r.refId, p.id)) return;
+        if (t === "grandchild"  && isGPGCRedundant(p.id, r.refId)) return;
+        if (t === "cousin"      && isCousinRedundant(p.id, r.refId)) return;
+        familyDirectEdges.push({ source: p.id, target: r.refId, label: t });
+      } else {
+        socialEdges.push({ source: p.id, target: r.refId, label: t });
+      }
+    });
+  });
+
+  // ── Connectivity (who has at least one visible link) ────────────────────
   const connectedIds = new Set();
-  edges.forEach((e) => { connectedIds.add(e.source); connectedIds.add(e.target); });
+  const mark = (a, b) => { connectedIds.add(a); connectedIds.add(b); };
+  socialEdges.forEach((e)       => mark(e.source, e.target));
+  familyDirectEdges.forEach((e) => mark(e.source, e.target));
+  singleParentEdges.forEach((e) => mark(e.parent, e.child));
+  familyGroups.forEach((fg) => {
+    connectedIds.add(fg.p1); connectedIds.add(fg.p2);
+    fg.children.forEach((id) => connectedIds.add(id));
+  });
+
+  // Flat edge list passed to the force layout (all edges as source/target pairs)
+  const allEdges = [
+    ...socialEdges,
+    ...familyDirectEdges,
+    ...singleParentEdges.map((e) => ({ source: e.parent, target: e.child })),
+    ...familyGroups.flatMap((fg) => [
+      { source: fg.p1, target: fg.p2 },
+      ...fg.children.map((c) => ({ source: fg.p1, target: c })),
+      ...fg.children.map((c) => ({ source: fg.p2, target: c })),
+    ]),
+  ];
+
   return {
-    connected: visible.filter((p) => connectedIds.has(p.id)),
+    connected: visible.filter((p) =>  connectedIds.has(p.id)),
     isolated:  visible.filter((p) => !connectedIds.has(p.id)),
-    edges
+    socialEdges, familyDirectEdges, familyGroups, singleParentEdges, allEdges,
   };
 }
 
@@ -4238,10 +4339,10 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
     return () => ro.disconnect();
   }, []);
 
-  const { connected, isolated, edges } = useMemo(
-    () => buildRelGraph(profiles, hiddenIds),
-    [profiles, hiddenIds]
-  );
+  const {
+    connected, isolated,
+    socialEdges, familyDirectEdges, familyGroups, singleParentEdges, allEdges,
+  } = useMemo(() => buildRelGraph(profiles, hiddenIds), [profiles, hiddenIds]);
 
   const isolatedSet = useMemo(() => new Set(isolated.map((p) => p.id)), [isolated]);
 
@@ -4271,7 +4372,7 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
           out[p.id] = { x: ISO_X + NODE_W / 2, y: 72 + i * (NODE_H + 16) };
         });
         if (connected.length > 0) {
-          const raw = forceLayout(connected, edges, netArea.w, netArea.h, NODE_W, NODE_H, 380);
+          const raw = forceLayout(connected, allEdges, netArea.w, netArea.h, NODE_W, NODE_H, 380);
           Object.keys(raw).forEach((id) => { out[id] = { x: raw[id].x + netArea.ox, y: raw[id].y }; });
         }
         return out;
@@ -4375,7 +4476,7 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
         </div>
         <div className="rel-toolbar-stats">
           <span>NODES <b>{totalVisible}</b></span>
-          <span>EDGES <b>{edges.length}</b></span>
+          <span>EDGES <b>{allEdges.length}</b></span>
           <span>ISOLATED <b>{isolated.length}</b></span>
         </div>
         <button className="ctrl-btn" onClick={() => setListOpen((v) => !v)}>
@@ -4417,19 +4518,74 @@ function RelationshipsModal({ profiles, onClose, onSelect }) {
                 >// NETWORK</text>
               )}
 
-              {edges.map((e) => {
+              {/* ── Social edges — green dashed ────────────────────── */}
+              {socialEdges.map((e) => {
                 const a = positions[e.source], b = positions[e.target];
                 if (!a || !b) return null;
                 const lx = (a.x + b.x) / 2, ly = (a.y + b.y) / 2 - 9;
                 return (
-                  <g key={`e-${e.source}-${e.target}`}>
-                    <line
-                      x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                      stroke="rgba(0,140,56,0.5)" strokeWidth="1.2" strokeDasharray="5 4"
-                    />
+                  <g key={`se-${e.source}-${e.target}`}>
+                    <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                      stroke="rgba(0,140,56,0.5)" strokeWidth="1.2" strokeDasharray="5 4" />
                     <text x={lx} y={ly} textAnchor="middle"
                       style={{ fill: "var(--amber)", fontSize: 8.5, fontFamily: "var(--mono)", letterSpacing: "0.1em", pointerEvents: "none" }}
                     >[{e.label.toUpperCase()}]</text>
+                  </g>
+                );
+              })}
+
+              {/* ── Family direct edges (sibling, aunt, etc.) — red dashed */}
+              {familyDirectEdges.map((e) => {
+                const a = positions[e.source], b = positions[e.target];
+                if (!a || !b) return null;
+                const lx = (a.x + b.x) / 2, ly = (a.y + b.y) / 2 - 9;
+                return (
+                  <g key={`fe-${e.source}-${e.target}`}>
+                    <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                      stroke="rgba(255,51,85,0.6)" strokeWidth="1.2" strokeDasharray="5 4" />
+                    <text x={lx} y={ly} textAnchor="middle"
+                      style={{ fill: "rgba(255,120,140,0.95)", fontSize: 8.5, fontFamily: "var(--mono)", letterSpacing: "0.1em", pointerEvents: "none" }}
+                    >[{e.label.toUpperCase()}]</text>
+                  </g>
+                );
+              })}
+
+              {/* ── Single-parent edges — red dashed, no midpoint ────── */}
+              {singleParentEdges.map((e) => {
+                const a = positions[e.parent], b = positions[e.child];
+                if (!a || !b) return null;
+                return (
+                  <line key={`sp-${e.parent}-${e.child}`}
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="rgba(255,51,85,0.6)" strokeWidth="1.5" strokeDasharray="5 3"
+                  />
+                );
+              })}
+
+              {/* ── Nuclear family groups: couple bar + midpoint fork ── */}
+              {familyGroups.map((fg) => {
+                const p1 = positions[fg.p1], p2 = positions[fg.p2];
+                if (!p1 || !p2) return null;
+                const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+                const kids = fg.children.map((id) => positions[id]).filter(Boolean);
+                return (
+                  <g key={`fg-${fg.p1}-${fg.p2}`}>
+                    {/* Parent couple bar */}
+                    <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                      stroke="rgba(255,51,85,0.65)" strokeWidth="1.5" strokeDasharray="5 3" />
+                    {/* Junction dot at midpoint */}
+                    <circle cx={mx} cy={my} r={3.5} fill="rgba(255,51,85,0.85)" />
+                    {/* Fork lines from midpoint to each child */}
+                    {fg.children.map((cId, ci) => {
+                      const cp = positions[cId];
+                      if (!cp) return null;
+                      return (
+                        <line key={`fgc-${cId}`}
+                          x1={mx} y1={my} x2={cp.x} y2={cp.y}
+                          stroke="rgba(255,51,85,0.65)" strokeWidth="1.5" strokeDasharray="5 3"
+                        />
+                      );
+                    })}
                   </g>
                 );
               })}
