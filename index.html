@@ -268,6 +268,19 @@
     outline: none;
     padding: 0;
     caret-color: var(--grn-0);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  /* ensure select controls and option lists are dark on desktop */
+  .input-wrap select {
+    background: linear-gradient(180deg, #07120a, #020806);
+    color: var(--grn-0);
+    padding-right: 18px;
+  }
+  .input-wrap select option {
+    background: #020806;
+    color: var(--grn-0);
   }
   .input-wrap input::placeholder,
   .input-wrap textarea::placeholder { color: #2f5b40; }
@@ -2324,6 +2337,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 // ============================================================
 const LS_KEY = "personaDB::v3";
 const LS_FOLDER_KEY = "personaDB::imageDirName";
+const CLASSIFIED_PIN_KEY = "personaDB::classifiedPin";
 
 function normalizeProfile(p) {
   return {
@@ -2349,7 +2363,18 @@ function loadProfiles() {
   }
 }
 function saveProfiles(list) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) { console.warn("saveProfiles failed", e); }
+}
+
+function saveAllState(profiles, dirName, classifiedPin) {
+  saveProfiles(profiles || []);
+  try {
+    if (dirName != null) localStorage.setItem(LS_FOLDER_KEY, dirName);
+  } catch (e) { console.warn("saveAllState folder save failed", e); }
+  try {
+    if (classifiedPin != null) localStorage.setItem(CLASSIFIED_PIN_KEY, classifiedPin);
+  } catch (e) { console.warn("saveAllState pin save failed", e); }
+  try { _saveGeocodeCache(); } catch (e) { console.warn("saveAllState geocode save failed", e); }
 }
 
 // ============================================================
@@ -5273,9 +5298,10 @@ function App() {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const restoreRef = useRef(null);
   const [relOpen, setRelOpen] = useState(false);
+  const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
+  const [classifiedPin, setClassifiedPin] = useState(() => localStorage.getItem(CLASSIFIED_PIN_KEY) || null);
   const [query, setQuery] = useState("");
   const [field, setField] = useState("all");
-  const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
   const [chatMode, setChatMode] = useState(false);
   const [chatPending, setChatPending] = useState(null);
   const [toast, setToast] = useState(null);
@@ -5326,7 +5352,13 @@ function App() {
 
   const { dirName, pickDirectory, resolve, hasMap } = useImageDir();
 
-  useEffect(() => { saveProfiles(profiles); }, [profiles]);
+  useEffect(() => { saveAllState(profiles, dirName, classifiedPin); }, [profiles, dirName, classifiedPin]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => saveAllState(profiles, dirName, classifiedPin);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [profiles, dirName, classifiedPin]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -5532,6 +5564,22 @@ function App() {
           return [{ kind: "err", text: "usage: classified <enable|disable>" }];
         }
         const next = (arg === "enable" || arg === "on");
+        if (next) {
+          if (classifiedPin) {
+            const pin = window.prompt("Enter classified PIN to enable:", "");
+            if (pin == null) return [{ kind: "err", text: "classified :: PIN entry cancelled" }];
+            if (pin !== classifiedPin) return [{ kind: "err", text: "classified :: PIN incorrect" }];
+          } else {
+            const pin = window.prompt("Set a new classified PIN:", "");
+            if (pin == null || !pin.trim()) return [{ kind: "err", text: "classified :: PIN creation cancelled" }];
+            const confirm = window.prompt("Confirm new classified PIN:", "");
+            if (confirm == null) return [{ kind: "err", text: "classified :: PIN creation cancelled" }];
+            if (pin !== confirm) return [{ kind: "err", text: "classified :: PIN confirmation mismatch" }];
+            try { localStorage.setItem(CLASSIFIED_PIN_KEY, pin); } catch (e) {}
+            setClassifiedPin(pin);
+            showToast("> classified PIN set");
+          }
+        }
         setClassifiedMode(next);
         return next
           ? [{ kind: "acc", text: "classified :: ENABLED — restricted records now visible" }]
@@ -5641,6 +5689,7 @@ function App() {
   };
 
   const handleBackup = () => {
+    saveAllState(profiles, dirName, classifiedPin);
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const dt = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -5661,16 +5710,25 @@ function App() {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        // support several backup shapes: raw array, { profiles: [...] }, { records: [...] }
         let arr = [];
-        if (Array.isArray(data)) arr = data;
-        else if (data && Array.isArray(data.profiles)) arr = data.profiles;
-        else if (data && Array.isArray(data.records)) arr = data.records;
-        // normalize each profile to ensure fields like contacts/relationships exist and flags are booleans
+        if (Array.isArray(data)) {
+          arr = data;
+        } else if (data && Array.isArray(data.profiles)) {
+          arr = data.profiles;
+        } else if (data && Array.isArray(data.records)) {
+          arr = data.records;
+        } else if (data && Array.isArray(data.data)) {
+          arr = data.data;
+        } else if (data && typeof data === "object") {
+          const values = Object.values(data).filter(Array.isArray);
+          if (values.length === 1) arr = values[0];
+          else if (values.length > 1 && Array.isArray(data.profiles)) arr = data.profiles;
+          else if (values.length > 1 && Array.isArray(data.records)) arr = data.records;
+          else if (Object.keys(data).length && !Array.isArray(data)) arr = [data];
+        }
         arr = arr.map(normalizeProfile);
+        saveAllState(arr, dirName, classifiedPin);
         setProfiles(arr);
-        // persist immediately (effect also saves, but make explicit for clarity)
-        try { saveProfiles(arr); } catch (e) {}
         setOpenProfile(null);
         setIndex(0);
         setQuery("");
