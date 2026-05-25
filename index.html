@@ -5661,14 +5661,23 @@ function App() {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        const arr = Array.isArray(data) ? data : [];
+        // support several backup shapes: raw array, { profiles: [...] }, { records: [...] }
+        let arr = [];
+        if (Array.isArray(data)) arr = data;
+        else if (data && Array.isArray(data.profiles)) arr = data.profiles;
+        else if (data && Array.isArray(data.records)) arr = data.records;
+        // normalize each profile to ensure fields like contacts/relationships exist and flags are booleans
+        arr = arr.map(normalizeProfile);
         setProfiles(arr);
+        // persist immediately (effect also saves, but make explicit for clarity)
+        try { saveProfiles(arr); } catch (e) {}
         setOpenProfile(null);
         setIndex(0);
         setQuery("");
         setField("all");
         showToast(`> restore complete :: ${arr.length} record(s) loaded`);
-      } catch (_) {
+      } catch (err) {
+        console.warn("restore failed", err);
         showToast("> restore failed :: invalid json");
       }
       e.target.value = "";
