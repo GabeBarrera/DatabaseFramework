@@ -689,6 +689,22 @@
   }
   .statusbar .seg { display: flex; gap: 16px; }
   .statusbar b { color: var(--grn-1); font-weight: 600; }
+  .statusbar .saved-ind {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    transition: all 0.18s ease;
+    color: var(--dim);
+    border: 1px solid transparent;
+  }
+  .statusbar .saved-ind.on {
+    color: #001408;
+    background: var(--grn-0);
+    box-shadow: 0 0 14px rgba(0,255,102,0.18);
+    border-color: var(--grn-2);
+  }
 
   /* --- Detail modal --- */
   .modal-veil {
@@ -5305,6 +5321,7 @@ function App() {
   const [chatMode, setChatMode] = useState(false);
   const [chatPending, setChatPending] = useState(null);
   const [toast, setToast] = useState(null);
+  
 
   // Sort + filter visible profiles for carousel/search.
   // Rules:
@@ -5351,6 +5368,20 @@ function App() {
   }, [filtered.length, index]);
 
   const { dirName, pickDirectory, resolve, hasMap } = useImageDir();
+
+  const [saved, setSaved] = useState(false);
+  const _savedTimer = useRef(null);
+  const markSaved = useCallback(() => {
+    setSaved(true);
+    if (_savedTimer.current) clearTimeout(_savedTimer.current);
+    _savedTimer.current = setTimeout(() => { setSaved(false); _savedTimer.current = null; }, 1600);
+  }, []);
+  useEffect(() => () => { if (_savedTimer.current) clearTimeout(_savedTimer.current); }, []);
+  const _firstSave = useRef(true);
+  useEffect(() => {
+    if (_firstSave.current) { _firstSave.current = false; return; }
+    markSaved();
+  }, [profiles, dirName, classifiedPin, markSaved]);
 
   useEffect(() => { saveAllState(profiles, dirName, classifiedPin); }, [profiles, dirName, classifiedPin]);
 
@@ -5587,6 +5618,16 @@ function App() {
       }
       case "echo":
         return args;
+      case "save":
+        try {
+          saveAllState(profiles, dirName, classifiedPin);
+          try { markSaved(); } catch (e) {}
+          showToast(`> saved :: ${profiles.length} record(s)`);
+          return { kind: "acc", text: `> saved :: ${profiles.length} record(s)` };
+        } catch (e) {
+          console.warn("save command failed", e);
+          return { kind: "err", text: "save failed" };
+        }
       case "exit":
       case "logout":
         return [{ kind: "dim", text: "nope — this shell is going nowhere." }];
@@ -5867,6 +5908,7 @@ function App() {
           <span>NAV: <span className="kbd">←</span><span className="kbd">→</span></span>
           <span>OPEN: <span className="kbd">ENTER</span></span>
           <span>SWIPE: <span className="kbd">touch</span></span>
+          {saved && <span className="saved-ind on">SAVED</span>}
         </div>
       </footer>
 
