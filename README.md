@@ -79,6 +79,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 - Geocode results are cached separately under `personaDB::geocode::v2` (includes country data).
 - **Export**: individual profiles can be downloaded as JSON from the detail modal.
 - **Import**: the edit/create form accepts a JSON paste to pre-populate fields.
+- **Restore**: loading a `.json` backup from the toolbar now permanently saves the restored profile data into `localStorage`.
 - The app starts with an empty database. Use the **DEMO** button to load the bundled example profiles.
 - **⚠ PURGE** wipes all records and leaves the database empty.
 

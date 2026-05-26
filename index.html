@@ -2367,6 +2367,18 @@ function normalizeProfile(p) {
     status: p.status || "",
   };
 }
+function extractProfilesFromBackup(data) {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    if (Array.isArray(data.profiles)) return data.profiles;
+    if (Array.isArray(data.records)) return data.records;
+    if (Array.isArray(data.data)) return data.data;
+    const values = Object.values(data).filter(Array.isArray);
+    if (values.length === 1) return values[0];
+    if (Object.keys(data).length && !Array.isArray(data)) return [data];
+  }
+  return [];
+}
 function loadProfiles() {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -5312,7 +5324,6 @@ function App() {
   const [mapFocusId, setMapFocusId] = useState(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
-  const restoreRef = useRef(null);
   const [relOpen, setRelOpen] = useState(false);
   const [classifiedMode, setClassifiedMode] = useState(false); // hidden shell toggle
   const [classifiedPin, setClassifiedPin] = useState(() => localStorage.getItem(CLASSIFIED_PIN_KEY) || null);
@@ -5741,53 +5752,37 @@ function App() {
 
   const handleRestoreConfirm = () => {
     setRestoreOpen(false);
-    restoreRef.current && restoreRef.current.click();
-  };
-
-  const handleRestoreFile = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        let arr = [];
-        if (Array.isArray(data)) {
-          arr = data;
-        } else if (data && Array.isArray(data.profiles)) {
-          arr = data.profiles;
-        } else if (data && Array.isArray(data.records)) {
-          arr = data.records;
-        } else if (data && Array.isArray(data.data)) {
-          arr = data.data;
-        } else if (data && typeof data === "object") {
-          const values = Object.values(data).filter(Array.isArray);
-          if (values.length === 1) arr = values[0];
-          else if (values.length > 1 && Array.isArray(data.profiles)) arr = data.profiles;
-          else if (values.length > 1 && Array.isArray(data.records)) arr = data.records;
-          else if (Object.keys(data).length && !Array.isArray(data)) arr = [data];
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.style.display = "none";
+    input.onchange = () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          const arr = extractProfilesFromBackup(data).map(normalizeProfile);
+          setProfiles(arr);
+          setOpenProfile(null);
+          setIndex(0);
+          setQuery("");
+          setField("all");
+          showToast(`> restore complete :: ${arr.length} record(s) loaded`);
+        } catch (err) {
+          console.warn("restore failed", err);
+          showToast("> restore failed :: invalid json");
         }
-        arr = arr.map(normalizeProfile);
-        saveAllState(arr, dirName, classifiedPin);
-        setProfiles(arr);
-        setOpenProfile(null);
-        setIndex(0);
-        setQuery("");
-        setField("all");
-        showToast(`> restore complete :: ${arr.length} record(s) loaded`);
-      } catch (err) {
-        console.warn("restore failed", err);
-        showToast("> restore failed :: invalid json");
-      }
-      e.target.value = "";
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
+    document.body.appendChild(input);
+    input.click();
+    input.addEventListener("change", () => {
+      setTimeout(() => { document.body.removeChild(input); }, 1000);
+    }, { once: true });
   };
-
-  // override resolve to also use embedded imageData when present
-  const cardResolve = useCallback((imageRef) => {
-    return resolve(imageRef);
-  }, [resolve]);
 
   // wrap ProfileCard's image resolution to fallback to imageData attached to each profile
   // we'll pass a resolver that knows about the current profile via closure inside Carousel
@@ -5841,7 +5836,6 @@ function App() {
                 {dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
               </button>
               <button className="ctrl-btn" onClick={onImportDemo}>DEMO</button>
-              <input ref={restoreRef} type="file" accept=".json,application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
               <button className="ctrl-btn" onClick={() => setRestoreOpen(true)}>⇩ RESTORE</button>
               <button className="ctrl-btn" onClick={handleBackup}>⇧ BACKUP</button>
               <button className="ctrl-btn primary" onClick={onNew}>+ NEW</button>
