@@ -77,6 +77,7 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 ### Data Persistence
 - All profiles are stored in `localStorage` under the key `personaDB::v3`.
 - Geocode results are cached separately under `personaDB::geocode::v2` (includes country data).
+- Profile metadata is stored in `localStorage`; large embedded `imageData` fields are stripped before save to avoid browser storage quota errors.
 - **Export**: individual profiles can be downloaded as JSON from the detail modal.
 - **Import**: the edit/create form accepts a JSON paste to pre-populate fields.
 - **Restore**: loading a `.json` backup from the toolbar now permanently saves the restored profile data into `localStorage`.
