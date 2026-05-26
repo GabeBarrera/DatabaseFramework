@@ -1953,10 +1953,6 @@
   }
 
   @media (max-width: 980px) {
-    .contact-row { grid-template-columns: 110px 1fr 32px; }
-  }
-
-  @media (max-width: 980px) {
     /* allow vertical scroll on small screens */
     html, body { height: auto; }
     body { overflow: auto; }
@@ -2648,24 +2644,6 @@ function Glitch({ children, className = "" }) {
     <span className={"glitch " + className} data-text={children}>
       {children}
     </span>
-  );
-}
-
-// ============================================================
-// HIGHLIGHTED TEXT (for search results)
-// ============================================================
-function Highlight({ text, q }) {
-  if (!q) return <>{text}</>;
-  const re = new RegExp("(" + q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig");
-  const parts = String(text).split(re);
-  return (
-    <>
-      {parts.map((p, i) =>
-        re.test(p) && p.toLowerCase() === q.toLowerCase()
-          ? <em key={i}>{p}</em>
-          : <React.Fragment key={i}>{p}</React.Fragment>
-      )}
-    </>
   );
 }
 
@@ -3878,65 +3856,6 @@ const FIELDS = [
   { id: "address", label: "ADDR" },
   { id: "description", label: "NOTES" }
 ];
-
-function SearchPanel({ profiles, filtered, query, setQuery, field, setField }) {
-  const total = profiles.length;
-  const count = filtered.length;
-  const fieldLabel = (FIELDS.find((f) => f.id === field) || FIELDS[0]).label;
-  return (
-    <aside className="leftrail">
-      <div className="panel-head">
-        <span>// QUERY</span><span className="bar" />
-        <span className="blink">_</span>
-      </div>
-      <div className="search-row">
-        <div className="input-wrap">
-          <span className="pfx">grep&nbsp;-i</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="filter cards by name, address, notes…"
-          />
-          {query && <span style={{ cursor: "pointer", color: "var(--grn-3)" }} onClick={() => setQuery("")}>✕</span>}
-        </div>
-      </div>
-      <div className="filter-chips">
-        {FIELDS.map((f) => (
-          <button
-            key={f.id}
-            className={"chip " + (field === f.id ? "on" : "")}
-            onClick={() => setField(f.id)}
-          >{f.label}</button>
-        ))}
-      </div>
-
-      <div className="results-head">
-        <span>MATCHES</span>
-        <span>{count.toString().padStart(3, "0")} / {total.toString().padStart(3, "0")}</span>
-      </div>
-
-      <div className="filter-status">
-        <div className="row"><span className="k">filter</span><span className={"v " + (query ? "" : "acc")}>{query || "(none)"}</span></div>
-        <div className="row"><span className="k">scope</span><span className="v">{fieldLabel}</span></div>
-        <div className="row"><span className="k">show</span><span className="v">{count} of {total}</span></div>
-        <div className="row"><span className="k">status</span><span className={"v " + (count === 0 ? "acc" : "")}>{count === 0 ? "NO MATCH" : query ? "FILTERING" : "ALL VISIBLE"}</span></div>
-
-        <div className="ascii-art">{count === 0 ?
-`   ┌──────────┐
-   │  ∅  NULL │
-   └──────────┘` :
-`   ┌────────────────┐
-   │ ░▒▓ ${String(count).padStart(3," ")} / ${String(total).padStart(3," ")} ▓▒░ │
-   └────────────────┘`}</div>
-
-        <div className="hint">
-          carousel below shows only cards matching the filter.<br/>
-          tip: type <b>help</b> in the terminal under the carousel.
-        </div>
-      </div>
-    </aside>
-  );
-}
 
 // ============================================================
 // TERMINAL — command prompt that replaces the folder bar
@@ -5435,29 +5354,6 @@ function App() {
     setTimeout(() => setToast((t) => (t === msg ? null : t)), 1900);
   };
 
-  // a resolver that also handles data URLs we embed
-  const resolveImg = useCallback((ref) => {
-    // The profile may carry imageData (embedded). prefer that if no folder linked.
-    if (!ref && arguments.length === 0) return null;
-    return resolve(ref);
-  }, [resolve]);
-  // helper: get best image for a given profile
-  const imgFor = useCallback((p) => {
-    if (!p) return null;
-    const resolved = resolve(p.image);
-    if (resolved) return resolved;
-    if (p.imageData) return p.imageData;
-    return null;
-  }, [resolve]);
-
-  const onPickFromSearch = (p) => {
-    const i = profiles.findIndex((x) => x.id === p.id);
-    if (i >= 0) {
-      setIndex(i);
-      setOpenProfile(p);
-    }
-  };
-
   // ---- Terminal command runner --------------------------------------------
   const findProfileByRef = (ref) => {
     const q = (ref || "").trim().toLowerCase();
@@ -5785,9 +5681,12 @@ function App() {
     input.type = "file";
     input.accept = ".json,application/json";
     input.style.display = "none";
+    const removeInput = () => {
+      setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 300);
+    };
     input.onchange = () => {
       const file = input.files && input.files[0];
-      if (!file) return;
+      if (!file) { removeInput(); return; }
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -5811,14 +5710,13 @@ function App() {
           console.warn("restore failed", err);
           showToast("> restore failed :: invalid json");
         }
+        removeInput();
       };
       reader.readAsText(file);
     };
+    input.addEventListener("cancel", removeInput, { once: true });
     document.body.appendChild(input);
     input.click();
-    input.addEventListener("change", () => {
-      setTimeout(() => { document.body.removeChild(input); }, 1000);
-    }, { once: true });
   };
 
   const mergeDuplicates = useCallback(() => {
@@ -5907,7 +5805,7 @@ function App() {
               <button className="ctrl-btn" onClick={pickDirectory}>
                 {dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
               </button>
-              <button className="ctrl-btn" onClick={() => { const n = mergeDuplicates(); /* toast shown inside */ }}>
+              <button className="ctrl-btn" onClick={mergeDuplicates}>
                 DEDUP
               </button>
               <button className="ctrl-btn" onClick={onImportDemo}>DEMO</button>

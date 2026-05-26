@@ -50,13 +50,14 @@ A single-file, browser-based persona database with a cyberpunk CRT aesthetic. Bu
 - **[ MAP ]** — opens the world map.
 - **[ RELATIONSHIPS ]** — opens the relationship graph.
 - **LINK IMG FOLDER / RE-LINK FOLDER** — attach a local image directory.
+- **DEDUP** — merges duplicate profiles (matched by ID, or by firstName + lastName + DOB). Duplicate contacts and relationships are de-duplicated; non-empty fields from later copies fill in gaps in the first copy.
 - **DEMO** — loads the eight bundled demo personas into the database. Skips any profiles whose IDs already exist, so it is safe to run on a non-empty database.
 - **+ NEW** — opens the profile creation form.
 - **⚠ PURGE** — wipes all records, leaving an empty database.
 
 ### Terminal
 - A command-line interface at the bottom of the screen accepts text commands for power users.
-- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `download <name|id>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `purge`, `chat`, `help`/`?`.
+- Commands: `list`/`ls`, `find`/`grep`/`filter`/`search <query>`, `goto <n|id|name>`, `open <n|id|name>`, `download <name|id>`, `map`, `new`, `link`/`link-folder`, `count`, `scope <field>`, `clear-filter`/`clearfilter`/`unfilter`/`reset`, `date`/`time`, `version`/`ver`, `whoami`, `echo <text>`, `clear`/`cls`, `save`, `purge`, `chat`, `help`/`?`.
 - **Chat mode** (`chat`): switches the terminal into a natural-language interface for querying and editing data. Type `exit` to return to the normal shell.
   - **Queries**: *"who has a birthday in May"*, *"find people who identify as hackers"*, *"who lives in Berlin"*, *"tell me about Lukas"*, *"who is over 40"*, *"who has Signal"*, *"who is a POI"*
   - **Relationship linking**: *"Josh is Kevin's parent"*, *"Josh is the parent of Kevin"*, *"Josh and Kevin are friends"*, *"link Josh and Kevin as rivals"* — creates bidirectional links with the correct reverse type (parent↔child, boss↔subordinate, mentor↔mentee, etc.)
