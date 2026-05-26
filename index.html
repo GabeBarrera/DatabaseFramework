@@ -2391,7 +2391,13 @@ function loadProfiles() {
   }
 }
 function saveProfiles(list) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) { console.warn("saveProfiles failed", e); }
+  try {
+    const clean = (list || []).map((p) => {
+      const { imageData, ...rest } = p;
+      return rest;
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify(clean));
+  } catch (e) { console.warn("saveProfiles failed", e); }
 }
 
 function saveAllState(profiles, dirName, classifiedPin) {
@@ -5764,6 +5770,7 @@ function App() {
         try {
           const data = JSON.parse(reader.result);
           const arr = extractProfilesFromBackup(data).map(normalizeProfile);
+          saveProfiles(arr);
           setProfiles(arr);
           setOpenProfile(null);
           setIndex(0);
