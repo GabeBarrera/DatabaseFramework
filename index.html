@@ -2360,6 +2360,7 @@ function normalizeProfile(p) {
     ...p,
     contacts: Array.isArray(p.contacts) ? p.contacts : [],
     relationships: Array.isArray(p.relationships) ? p.relationships : [],
+    tags: Array.isArray(p.tags) ? p.tags : [],
     poi: !!p.poi,
     hidden: !!p.hidden,
     classified: !!p.classified,
@@ -2545,9 +2546,17 @@ function geocodeCached(address) {
 // User picks a folder via showDirectoryPicker (Chromium) or <input webkitdirectory>
 // ============================================================
 function useImageDir() {
-  const [dirName, setDirName] = useState(() => localStorage.getItem(LS_FOLDER_KEY) || null);
+  const [dirName, setDirNameState] = useState(() => localStorage.getItem(LS_FOLDER_KEY) || null);
   const [map, setMap] = useState({}); // { 'lowercase_name.jpg' : objectURL }
   const objectUrlsRef = useRef([]);
+
+  const setDirName = useCallback((name) => {
+    setDirNameState(name);
+    try {
+      if (name != null) localStorage.setItem(LS_FOLDER_KEY, name);
+      else localStorage.removeItem(LS_FOLDER_KEY);
+    } catch (e) {}
+  }, []);
 
   const cleanup = () => {
     objectUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
@@ -2576,7 +2585,6 @@ function useImageDir() {
       try {
         const handle = await window.showDirectoryPicker();
         setDirName(handle.name);
-        localStorage.setItem(LS_FOLDER_KEY, handle.name);
         const collected = [];
         // recursive walk one level deep — keep it predictable
         for await (const entry of handle.values()) {
@@ -2600,12 +2608,11 @@ function useImageDir() {
       input.directory = true;
       input.accept = "image/*";
       input.onchange = () => {
-        if (input.files && input.files.length) {
+          if (input.files && input.files.length) {
           const first = input.files[0];
           // webkitRelativePath like "MyFolder/file.jpg"
           const folder = (first.webkitRelativePath || "").split("/")[0] || "Local Folder";
           setDirName(folder);
-          localStorage.setItem(LS_FOLDER_KEY, folder);
           ingestFiles(input.files);
           resolve(true);
         } else {
@@ -2630,7 +2637,7 @@ function useImageDir() {
 
   useEffect(() => () => cleanup(), []);
 
-  return { dirName, pickDirectory, resolve, hasMap: Object.keys(map).length > 0 };
+  return { dirName, setDirName, pickDirectory, resolve, hasMap: Object.keys(map).length > 0 };
 }
 
 // ============================================================
@@ -2697,6 +2704,7 @@ function ProfileCard({ profile, position, isCenter, onClick, resolveImg }) {
         <div className="card-name">
           {profile.firstName} <span className="last">{profile.lastName}</span>
         </div>
+        <div style={{ fontSize: 11, color: "var(--grn-3)", marginTop: 4 }}>{(profile.tags || []).slice(0,3).join(', ')}</div>
         <div className="card-id">DOB {fmtDate(profile.dob)} &nbsp;·&nbsp; AGE {ageFrom(profile.dob)}</div>
         <div className="card-grid">
           <div className="k">ETHN</div><div className="v">{profile.ethnicity || "—"}</div>
@@ -2968,6 +2976,10 @@ function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap, onEdit
                 <div className="v">{profile.country || "—"}</div>
               </div>
               <div className="field">
+                <span className="k">Tags</span>
+                <div className="v">{(profile.tags || []).length ? (profile.tags || []).join(', ') : '—'}</div>
+              </div>
+              <div className="field">
                 <span className="k">Reference ID</span>
                 <div className="v">{profile.id}</div>
               </div>
@@ -3100,6 +3112,7 @@ function NewEntryModal({ onClose, onSave, initial }) {
     hidden: initial ? !!initial.hidden : false,
     classified: initial ? !!initial.classified : false
   });
+  const [tagsString, setTagsString] = useState(initial && Array.isArray(initial.tags) ? initial.tags.join(", ") : (initial && typeof initial.tags === 'string' ? initial.tags : ""));
   const [importErr, setImportErr] = useState(null);
   const importRef = useRef(null);
   const toggleFlag = (k) => setFlags((f) => ({ ...f, [k]: !f[k] }));
@@ -3126,6 +3139,8 @@ function NewEntryModal({ onClose, onSave, initial }) {
         if (data.imageData) setImgPreview(data.imageData);
         if (Array.isArray(data.contacts)) setContacts(data.contacts.map((c) => ({ ...c })));
         if (Array.isArray(data.relationships)) setRelationships(data.relationships.map((r) => ({ ...r })));
+        if (Array.isArray(data.tags)) setTagsString(data.tags.join(", "));
+        else if (typeof data.tags === 'string') setTagsString(data.tags);
         setFlags({ poi: !!data.poi, hidden: !!data.hidden, classified: !!data.classified });
         setErrors({});
         setImportErr(null);
@@ -3197,6 +3212,7 @@ function NewEntryModal({ onClose, onSave, initial }) {
       status: form.status,
       contacts: cleanContacts,
       relationships: cleanRelationships,
+      tags: (tagsString || "").split(",").map((t) => t.trim()).filter(Boolean),
       poi: !!flags.poi,
       hidden: !!flags.hidden,
       classified: !!flags.classified
@@ -3300,6 +3316,12 @@ function NewEntryModal({ onClose, onSave, initial }) {
               <label>Country <span style={{ color: "var(--dim)", fontSize: 10, letterSpacing: "0.1em" }}>auto-detected from address</span></label>
               <div className="input-wrap"><span className="pfx">&gt;</span>
                 <input value={form.country} onChange={(e) => set("country", e.target.value)} placeholder="e.g. Germany" />
+              </div>
+            </div>
+            <div className="row full">
+              <label>Tags <span style={{ color: "var(--dim)", fontSize: 10, letterSpacing: "0.1em" }}>comma-separated</span></label>
+              <div className="input-wrap"><span className="pfx">&gt;</span>
+                <input value={tagsString} onChange={(e) => setTagsString(e.target.value)} placeholder="e.g. suspect, local, vip" />
               </div>
             </div>
             <div className="row full">
@@ -5384,7 +5406,7 @@ function App() {
     if (index > filtered.length) setIndex(0);
   }, [filtered.length, index]);
 
-  const { dirName, pickDirectory, resolve, hasMap } = useImageDir();
+  const { dirName, setDirName, pickDirectory, resolve, hasMap } = useImageDir();
 
   const [saved, setSaved] = useState(false);
   const _savedTimer = useRef(null);
@@ -5752,7 +5774,8 @@ function App() {
     const pad = (n) => String(n).padStart(2, "0");
     const dt = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const filename = `persona_db_${dt}.json`;
-    downloadJSON(profiles, filename);
+    const payload = { profiles, dirName: dirName || null, classifiedPin: classifiedPin || null, exportedAt: now.toISOString() };
+    downloadJSON(payload, filename);
     showToast(`> backup saved :: ${filename}`);
   };
 
@@ -5772,6 +5795,13 @@ function App() {
           const arr = extractProfilesFromBackup(data).map(normalizeProfile);
           saveProfiles(arr);
           setProfiles(arr);
+          if (data && data.dirName) {
+            try { setDirName(data.dirName); } catch (e) {}
+          }
+          if (data && data.classifiedPin) {
+            try { localStorage.setItem(CLASSIFIED_PIN_KEY, data.classifiedPin); } catch (e) {}
+            setClassifiedPin(data.classifiedPin);
+          }
           setOpenProfile(null);
           setIndex(0);
           setQuery("");
@@ -5790,6 +5820,41 @@ function App() {
       setTimeout(() => { document.body.removeChild(input); }, 1000);
     }, { once: true });
   };
+
+  const mergeDuplicates = useCallback(() => {
+    const map = new Map();
+    let mergedCount = 0;
+    profiles.forEach((p) => {
+      const key = (p.id || "").toLowerCase() || ((p.firstName || "").toLowerCase() + "|" + (p.lastName || "").toLowerCase() + "|" + (p.dob || ""));
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, { ...p, contacts: Array.isArray(p.contacts) ? [...p.contacts] : [], relationships: Array.isArray(p.relationships) ? [...p.relationships] : [], tags: Array.isArray(p.tags) ? [...p.tags] : [] });
+      } else {
+        mergedCount++;
+        const existing = map.get(key);
+        const merged = { ...existing };
+        // prefer existing non-empty fields, otherwise take from p
+        ["firstName","lastName","dob","ethnicity","sex","address","description","image","country","status"].forEach((f) => {
+          if ((!merged[f] || merged[f] === "") && p[f]) merged[f] = p[f];
+        });
+        if (!merged.imageData && p.imageData) merged.imageData = p.imageData;
+        const uniq = (a, b) => {
+          const seen = new Set((a || []).map((x) => JSON.stringify(x)));
+          const out = (a || []).slice();
+          (b || []).forEach((x) => { const s = JSON.stringify(x); if (!seen.has(s)) { out.push(x); seen.add(s); } });
+          return out;
+        };
+        merged.contacts = uniq(existing.contacts, p.contacts);
+        merged.relationships = uniq(existing.relationships, p.relationships);
+        merged.tags = uniq(existing.tags, p.tags);
+        map.set(key, merged);
+      }
+    });
+    const mergedArr = Array.from(map.values());
+    setProfiles(mergedArr);
+    showToast(`> merged duplicates :: ${mergedCount} merged`);
+    return mergedCount;
+  }, [profiles, setProfiles]);
 
   // wrap ProfileCard's image resolution to fallback to imageData attached to each profile
   // we'll pass a resolver that knows about the current profile via closure inside Carousel
@@ -5841,6 +5906,9 @@ function App() {
               </button>
               <button className="ctrl-btn" onClick={pickDirectory}>
                 {dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
+              </button>
+              <button className="ctrl-btn" onClick={() => { const n = mergeDuplicates(); /* toast shown inside */ }}>
+                DEDUP
               </button>
               <button className="ctrl-btn" onClick={onImportDemo}>DEMO</button>
               <button className="ctrl-btn" onClick={() => setRestoreOpen(true)}>⇩ RESTORE</button>
