@@ -1235,6 +1235,48 @@
   }
   .terminal.collapsed .term-body { display: none; }
 
+  .term-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-bottom: 1px dashed var(--line-2);
+    flex-shrink: 0;
+  }
+  .term-tool-btn {
+    border: 1px solid var(--line-2);
+    background: transparent;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .term-tool-btn:hover { border-color: var(--grn-3); color: var(--grn-1); }
+  .term-tool-btn.active {
+    border-color: var(--grn-0);
+    color: var(--grn-0);
+    box-shadow: 0 0 8px rgba(0,255,102,0.25);
+  }
+  .term-tool-btn.continuous {
+    border-color: var(--amber);
+    color: var(--amber);
+    box-shadow: 0 0 8px rgba(255,203,31,0.25);
+  }
+  .term-mic-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1s infinite;
+  }
+
   /* SearchPanel — status block (replaces result list) */
   .filter-status {
     flex: 1;
@@ -3865,28 +3907,155 @@ function Terminal({ runCommand, banner, fullrail, chatMode }) {
   const [history, setHistory] = useState(banner ? [{ cmd: null, lines: banner }] : []);
   const [cmdHistory, setCmdHistory] = useState([]);
   const [histIdx, setHistIdx] = useState(-1);
+  const [micOn, setMicOn] = useState(false);
+  const [micContinuous, setMicContinuous] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(false);
   const inputRef = useRef(null);
   const bodyRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const voiceOnRef = useRef(false);
+  const micOnRef = useRef(false);
+  const micContRef = useRef(false);
+  const processCmdRef = useRef(null);
   const PROMPT = chatMode ? "persona@chat:~$" : "persona@root:~$";
+
+  useEffect(() => { voiceOnRef.current = voiceOn; }, [voiceOn]);
+  useEffect(() => { micOnRef.current = micOn; }, [micOn]);
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [history]);
 
+  useEffect(() => () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }, []);
+
+  function speakLines(lines) {
+    if (!voiceOnRef.current || !window.speechSynthesis) return;
+    const text = lines
+      .map((l) => (typeof l === "string" ? l : l.text || ""))
+      .filter(Boolean)
+      .join(". ");
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  function pushHistory(cmd, lines) {
+    setHistory((h) => [...h, { cmd, lines }].slice(-200));
+    speakLines(lines);
+  }
+
+  function stopMicListening() {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setMicOn(false);
+    setMicContinuous(false);
+    micOnRef.current = false;
+    micContRef.current = false;
+  }
+
+  function startMicListening(continuous) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return false;
+    stopMicListening();
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = false;
+    r.lang = "en-US";
+    r.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) continue;
+        const transcript = event.results[i][0].transcript.trim();
+        let cmdText = null;
+        if (micContRef.current) {
+          cmdText = transcript;
+        } else {
+          const m = transcript.match(/^[Cc]ommand[,:\s]+(.+)$/i);
+          if (m) cmdText = m[1].trim();
+        }
+        if (cmdText && processCmdRef.current) processCmdRef.current(cmdText, "[mic] " + cmdText);
+      }
+    };
+    r.onerror = (e) => {
+      if (e.error !== "no-speech" && e.error !== "aborted")
+        pushHistory(null, [{ kind: "err", text: "mic :: error :: " + e.error }]);
+    };
+    r.onend = () => { if (micOnRef.current) { try { r.start(); } catch (e) {} } };
+    r.start();
+    recognitionRef.current = r;
+    setMicOn(true);
+    setMicContinuous(continuous);
+    micOnRef.current = true;
+    micContRef.current = continuous;
+    return true;
+  }
+
+  function processCmd(raw, displayCmd) {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    const [head, ...rest] = trimmed.split(/\s+/);
+    const name = head.toLowerCase();
+    let lines;
+
+    if (name === "mic") {
+      const sub = (rest[0] || "").toLowerCase();
+      const hasCFlag = rest.includes("-c");
+      if (sub === "enable" || sub === "on") {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          lines = [{ kind: "err", text: "mic :: SpeechRecognition not supported in this browser" }];
+        } else if (startMicListening(hasCFlag)) {
+          lines = [{ kind: "acc", text: hasCFlag
+            ? "mic :: CONTINUOUS — all speech executed as commands"
+            : "mic :: ON — say 'Command <cmd>' to activate" }];
+        }
+      } else if (sub === "disable" || sub === "off") {
+        stopMicListening();
+        lines = [{ kind: "acc", text: "mic :: DISABLED" }];
+      } else {
+        lines = [{ kind: "err", text: "usage: mic <enable|disable> [-c]" }];
+      }
+    } else if (name === "voice") {
+      const sub = (rest[0] || "").toLowerCase();
+      if (sub === "enable" || sub === "on") {
+        setVoiceOn(true);
+        voiceOnRef.current = true;
+        lines = [{ kind: "acc", text: "voice :: ENABLED — results will be read aloud" }];
+      } else if (sub === "disable" || sub === "off") {
+        setVoiceOn(false);
+        voiceOnRef.current = false;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        lines = [{ kind: "acc", text: "voice :: DISABLED" }];
+      } else {
+        lines = [{ kind: "err", text: "usage: voice <enable|disable>" }];
+      }
+    } else {
+      const result = runCommand(trimmed);
+      if (result === "__clear__") { setHistory([]); return; }
+      lines = Array.isArray(result)
+        ? result.map((x) => (typeof x === "string" ? { kind: "out", text: x } : x))
+        : result == null ? []
+        : [{ kind: "out", text: String(result) }];
+    }
+
+    if (lines) pushHistory(displayCmd !== undefined ? displayCmd : trimmed, lines);
+  }
+
+  processCmdRef.current = processCmd;
+
   const submit = (e) => {
     e.preventDefault();
     const cmd = value;
     if (!cmd.trim()) return;
-    const result = runCommand(cmd);
-    if (result === "__clear__") {
-      setHistory([]);
-    } else {
-      const lines = Array.isArray(result)
-        ? result.map((x) => typeof x === "string" ? { kind: "out", text: x } : x)
-        : result == null ? []
-        : [{ kind: "out", text: String(result) }];
-      setHistory((h) => [...h, { cmd, lines }].slice(-200));
-    }
+    processCmd(cmd);
     setCmdHistory((h) => (h[h.length - 1] === cmd ? h : [...h, cmd]).slice(-100));
     setHistIdx(-1);
     setValue("");
@@ -3937,6 +4106,32 @@ function Terminal({ runCommand, banner, fullrail, chatMode }) {
           ))}
         </div>
       )}
+      <div className="term-toolbar" onClick={(e) => e.stopPropagation()}>
+        <button
+          className={"term-tool-btn" + (micOn ? (micContinuous ? " active continuous" : " active") : "")}
+          onClick={() => micOn ? stopMicListening() : startMicListening(false)}
+          title={micOn ? (micContinuous ? "Mic: continuous mode (click to disable)" : "Mic: say 'Command ...' (click to disable)") : "Enable microphone (keyword mode)"}
+        >
+          {micOn && <span className="term-mic-dot" />}
+          MIC: {micOn ? (micContinuous ? "LIVE" : "ON") : "OFF"}
+        </button>
+        <button
+          className={"term-tool-btn" + (voiceOn ? " active" : "")}
+          onClick={() => {
+            if (voiceOn) {
+              setVoiceOn(false);
+              voiceOnRef.current = false;
+              if (window.speechSynthesis) window.speechSynthesis.cancel();
+            } else {
+              setVoiceOn(true);
+              voiceOnRef.current = true;
+            }
+          }}
+          title={voiceOn ? "Voice output: ON (click to disable)" : "Enable voice output"}
+        >
+          VOICE: {voiceOn ? "ON" : "OFF"}
+        </button>
+      </div>
       <form className="term-input-row" onSubmit={submit}>
         <span className="term-pfx">{PROMPT}</span>
         {!value && <span className="term-cursor">▌</span>}
@@ -5428,7 +5623,14 @@ function App() {
           { kind: "cmd-row", cmd: "version",      desc: "prints version" },
           { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" },
           { kind: "cmd-row", cmd: "download <name|id>", desc: "download a profile as .json" },
-          { kind: "cmd-row", cmd: "chat",         desc: "enter natural-language query mode" }
+          { kind: "cmd-row", cmd: "chat",         desc: "enter natural-language query mode" },
+          "",
+          "AUDIO I/O:",
+          { kind: "cmd-row", cmd: "mic enable",      desc: "microphone on — say 'Command <cmd>' to execute" },
+          { kind: "cmd-row", cmd: "mic enable -c",   desc: "continuous mode — all speech executed as commands" },
+          { kind: "cmd-row", cmd: "mic disable",     desc: "turn microphone off" },
+          { kind: "cmd-row", cmd: "voice enable",    desc: "read terminal results aloud (text-to-speech)" },
+          { kind: "cmd-row", cmd: "voice disable",   desc: "silence voice output" }
         ];
       case "purge":
         setPurgeOpen(true);
