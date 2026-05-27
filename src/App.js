@@ -11,7 +11,7 @@ import { PurgeModal } from "./components/modals/PurgeModal.js";
 import { RestoreModal } from "./components/modals/RestoreModal.js";
 import { RelationshipsModal } from "./components/modals/RelationshipsModal.js";
 import { loadProfiles, saveProfiles, saveAllState, normalizeProfile, extractProfilesFromBackup, CLASSIFIED_PIN_KEY } from "./lib/storage.js";
-import { geocodeOSM } from "./lib/geocode.js";
+import { geocodeOSM, geocodeCached, haversineKm, getUserLocation } from "./lib/geocode.js";
 import { downloadJSON } from "./lib/utils.js";
 import { useImageDir } from "./hooks/useImageDir.js";
 import { FIELDS } from "./constants/fields.js";
@@ -117,6 +117,20 @@ export function App() {
     return { idx: null };
   };
 
+  const findNearestProfile = async (profileList) => {
+    const userLoc = await getUserLocation();
+    let best = null, bestDist = Infinity;
+    for (const p of profileList) {
+      if (!p.address) continue;
+      let geo = geocodeCached(p.address);
+      if (geo === undefined) geo = await geocodeOSM(p.address);
+      if (!geo) continue;
+      const dist = haversineKm(userLoc.lat, userLoc.lng, geo.lat, geo.lng);
+      if (dist < bestDist) { bestDist = dist; best = p; }
+    }
+    return { profile: best, distKm: bestDist, userLoc };
+  };
+
   const resolveCountry = (profileId, address) => {
     if (!address) return;
     geocodeOSM(address).then((r) => {
@@ -137,6 +151,18 @@ export function App() {
       if (result.newProfiles) setProfiles(result.newProfiles);
       if (result.pendingAction !== undefined) setChatPending(result.pendingAction);
       if (result.countryRefresh) resolveCountry(result.countryRefresh.profileId, result.countryRefresh.address);
+      if (result.nearestRequest) {
+        return findNearestProfile(profiles).then(({ profile, distKm }) => {
+          if (!profile) return [{ kind: "err", text: "> no geocodable profiles found" }];
+          const km = distKm.toFixed(1);
+          const mi = (distKm * 0.621371).toFixed(1);
+          return [
+            { kind: "acc", text: `> nearest :: ${profile.firstName} ${profile.lastName}  [${profile.id}]` },
+            `  address  :: ${profile.address}`,
+            `  distance :: ${km} km  (${mi} mi)`,
+          ];
+        }).catch((err) => [{ kind: "err", text: `> geolocation error :: ${err.message || err}` }]);
+      }
       return result.lines;
     }
 
@@ -177,6 +203,7 @@ export function App() {
           { kind: "cmd-row", cmd: "version",      desc: "prints version" },
           { kind: "cmd-row", cmd: "purge",        desc: "wipe all records (opens confirmation)" },
           { kind: "cmd-row", cmd: "download <name|id>", desc: "download a profile as .json" },
+          { kind: "cmd-row", cmd: "distance <name|id>", desc: "show distance from your location to a profile" },
           { kind: "cmd-row", cmd: "chat",         desc: "enter natural-language query mode" },
           "",
           "AUDIO I/O:",
@@ -202,6 +229,31 @@ export function App() {
         const safe = (`${target.firstName}_${target.lastName}`).replace(/\s+/g, "_");
         downloadJSON(target, `${safe}_${target.id}.json`);
         return `> downloading :: ${safe}_${target.id}.json`;
+      }
+      case "distance": {
+        if (!args) return [{ kind: "err", text: "usage: distance <name|id>" }];
+        const dq = args.toLowerCase();
+        const dtarget = profiles.find((p) =>
+          (p.id || "").toLowerCase() === dq ||
+          `${p.firstName} ${p.lastName}`.toLowerCase() === dq ||
+          p.firstName.toLowerCase() === dq ||
+          p.lastName.toLowerCase() === dq
+        );
+        if (!dtarget) return [{ kind: "err", text: `no match :: "${args}"` }];
+        if (!dtarget.address) return [{ kind: "err", text: `no address on record :: ${dtarget.firstName} ${dtarget.lastName}  [${dtarget.id}]` }];
+        return getUserLocation().then(async (userLoc) => {
+          let geo = geocodeCached(dtarget.address);
+          if (geo === undefined) geo = await geocodeOSM(dtarget.address);
+          if (!geo) return [{ kind: "err", text: `> could not geocode :: "${dtarget.address}"` }];
+          const distKm = haversineKm(userLoc.lat, userLoc.lng, geo.lat, geo.lng);
+          const km = distKm.toFixed(1);
+          const mi = (distKm * 0.621371).toFixed(1);
+          return [
+            { kind: "acc", text: `> ${dtarget.firstName} ${dtarget.lastName}  [${dtarget.id}]` },
+            `  address  :: ${dtarget.address}`,
+            `  distance :: ${km} km  (${mi} mi)`,
+          ];
+        }).catch((err) => [{ kind: "err", text: `> geolocation error :: ${err.message || err}` }]);
       }
       case "chat":
         setChatMode(true);

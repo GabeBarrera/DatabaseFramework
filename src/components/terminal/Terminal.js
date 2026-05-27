@@ -139,6 +139,29 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
     } else {
       const result = runCommand(trimmed);
       if (result === "__clear__") { setHistory([]); return; }
+      if (result && typeof result.then === "function") {
+        const displayKey = displayCmd !== undefined ? displayCmd : trimmed;
+        setHistory((h) => [...h, { cmd: displayKey, lines: [{ kind: "dim", text: "> locating..." }] }].slice(-200));
+        result.then((asyncResult) => {
+          const normalized = (Array.isArray(asyncResult) ? asyncResult : [asyncResult == null ? { kind: "out", text: "" } : asyncResult])
+            .map((x) => (typeof x === "string" ? { kind: "out", text: x } : x));
+          setHistory((h) => {
+            if (h.length === 0) return h;
+            const copy = [...h];
+            copy[copy.length - 1] = { ...copy[copy.length - 1], lines: normalized };
+            return copy;
+          });
+          speakLines(normalized);
+        }).catch(() => {
+          setHistory((h) => {
+            if (h.length === 0) return h;
+            const copy = [...h];
+            copy[copy.length - 1] = { ...copy[copy.length - 1], lines: [{ kind: "err", text: "> request failed" }] };
+            return copy;
+          });
+        });
+        return;
+      }
       lines = Array.isArray(result)
         ? result.map((x) => (typeof x === "string" ? { kind: "out", text: x } : x))
         : result == null ? []

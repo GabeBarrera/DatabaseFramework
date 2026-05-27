@@ -75,6 +75,7 @@ export function interpretChat(query, profiles, pending) {
       "  who is related to [name]",
       "  tell me about [name]",
       "  find people who [keyword]",
+      "  who is closest to me / nearest profile / identify the closest person",
       "",
       "MUTATIONS:",
       "  [name] is [name]'s [relation]          — e.g. josh is kevin's parent",
@@ -183,6 +184,9 @@ export function interpretChat(query, profiles, pending) {
       return { lines };
     }
   }
+
+  if (/closest|nearest|nearby|near me|close to me/.test(q) && /person|profile|someone|who|people|identify/.test(q))
+    return { lines: [{ kind: "dim", text: "> locating nearest profile..." }], nearestRequest: true };
 
   const locMatch = q.match(/(?:lives? in|from|based in|located in|in)\s+([a-z\s,\-]+?)(?:\?|$)/);
   if (locMatch && /lives?|from|based|located/.test(q)) {
