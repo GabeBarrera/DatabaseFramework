@@ -180,6 +180,78 @@
 .new-inner .label { letter-spacing: 0.34em; text-transform: uppercase; font-size: 14px; color: var(--grn-0); margin-bottom: 6px; }
 .new-inner .sub { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
 
+/* ── Profile list view ───────────────────────────────── */
+.plist-wrap {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 22px 12px 22px;
+}
+
+.plist-header,
+.plist-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 80px 130px 44px minmax(80px, 120px) 80px 1fr;
+  gap: 0 14px;
+  align-items: center;
+  padding: 6px 10px;
+}
+
+.plist-header {
+  position: sticky;
+  top: 0;
+  background: #030906;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--dim);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.plist-row {
+  border-bottom: 1px dotted var(--line);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.plist-row:hover { background: rgba(0,255,102,0.05); }
+.plist-row.is-poi { border-left: 2px solid var(--amber); padding-left: 8px; }
+.plist-row.is-deceased { opacity: 0.5; }
+
+.plist-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.plist-star { color: var(--amber); font-size: 9.5px; flex-shrink: 0; }
+.plist-fn { color: var(--grn-2); text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.05em; white-space: nowrap; }
+.plist-ln { color: var(--grn-0); text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.05em; font-weight: 700; white-space: nowrap; }
+.plist-badge {
+  font-size: 8.5px; letter-spacing: 0.12em; padding: 1px 4px;
+  border: 1px solid var(--line-2); color: var(--dim);
+  text-transform: uppercase; flex-shrink: 0; white-space: nowrap;
+}
+.plist-badge-red { border-color: rgba(255,51,85,0.4); color: var(--red); }
+
+.plist-id    { color: var(--grn-4); font-size: 9.5px; letter-spacing: 0.12em; }
+.plist-dob   { color: var(--grn-1); font-size: 10px; letter-spacing: 0.08em; white-space: nowrap; }
+.plist-age   { color: var(--dim); font-size: 9.5px; }
+.plist-sex   { color: var(--grn-2); font-size: 10px; letter-spacing: 0.08em; }
+.plist-ethn  { color: var(--grn-1); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plist-status { color: var(--grn-3); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.plist-status-dead { color: var(--red); }
+.plist-addr  { color: var(--dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.plist-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--dim);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+
 .pager {
   display: flex; justify-content: center; gap: 6px;
   padding: 0 16px 8px 16px; flex-wrap: wrap;

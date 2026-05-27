@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { html } from "htm/react";
 
-export function RestoreModal({ count, onConfirm, onClose }) {
+export function RestoreModal({ count, onConfirm, onClose, onDemo }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -48,6 +48,7 @@ export function RestoreModal({ count, onConfirm, onClose }) {
           </div>
           <div className="foot-actions">
             <button className="ctrl-btn" onClick=${onClose}>↩ ABORT</button>
+            <button className="ctrl-btn" onClick=${onDemo}>⇩ DEMO</button>
             <button
               className="ctrl-btn danger"
               style=${{ background: "var(--red)", color: "#fff", borderColor: "var(--red)", boxShadow: "0 0 14px rgba(255,51,85,0.4)" }}

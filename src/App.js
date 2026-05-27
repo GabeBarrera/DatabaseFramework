@@ -3,6 +3,7 @@ import { html } from "htm/react";
 import { TopBar } from "./components/TopBar.js";
 import { SearchStrip } from "./components/SearchStrip.js";
 import { Carousel } from "./components/carousel/Carousel.js";
+import { ProfileList } from "./components/carousel/ProfileList.js";
 import { Terminal } from "./components/terminal/Terminal.js";
 import { DetailModal } from "./components/modals/DetailModal.js";
 import { NewEntryModal } from "./components/modals/NewEntryModal.js";
@@ -35,6 +36,18 @@ export function App() {
   const [chatMode, setChatMode] = useState(false);
   const [chatPending, setChatPending] = useState(null);
   const [toast, setToast] = useState(null);
+  const [listView, setListView] = useState(false);
+  const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const editMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!editMenuOpen) return;
+    const handler = (e) => {
+      if (editMenuRef.current && !editMenuRef.current.contains(e.target)) setEditMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [editMenuOpen]);
 
   const filtered = useMemo(() => {
     const visible = classifiedMode ? profiles : profiles.filter((p) => !p.classified);
@@ -582,24 +595,38 @@ export function App() {
           <div className="stage-head">
             <div className="breadcrumbs">
               <span>/db/</span><b>profiles/</b><span>browse</span>
-              <span className="dim"> &nbsp;//&nbsp; idx </span>
+              <span className="dim">  //  idx </span>
               <b>${String(Math.min(index + 1, filtered.length + 1)).padStart(2, "0")}</b>
               <span className="dim"> / ${String(filtered.length + 1).padStart(2, "0")}</span>
-              ${query && html`<span className="dim"> &nbsp;//&nbsp; <span className="amber">filtered</span>: ${filtered.length}/${profiles.length}</span>`}
-              ${classifiedMode && html`<span className="dim"> &nbsp;//&nbsp; <span style=${{ color: "var(--red)" }}>CLEARANCE: HIGH</span></span>`}
+              ${query && html`<span className="dim">  //  <span className="amber">filtered</span>: ${filtered.length}/${profiles.length}</span>`}
+              ${classifiedMode && html`<span className="dim">  //  <span style=${{ color: "var(--red)" }}>CLEARANCE: HIGH</span></span>`}
             </div>
             <div className="stage-controls">
-              <button className="ctrl-btn" onClick=${() => { setMapFocusId(null); setMapOpen(true); }}>[ MAP ]</button>
-              <button className="ctrl-btn" onClick=${() => setRelOpen(true)}>[ RELATIONSHIPS ]</button>
-              <button className="ctrl-btn" onClick=${pickDirectory}>
-                ${dirName ? "RE-LINK FOLDER" : "LINK IMG FOLDER"}
+              <button className="ctrl-btn-orange" onClick=${() => { setMapFocusId(null); setMapOpen(true); }}>MAP</button>
+              <button className="ctrl-btn-orange" onClick=${() => setRelOpen(true)}>RELATIONSHIPS</button>
+              <button className=${"ctrl-btn-orange" + (listView ? " active" : "")} onClick=${() => setListView((v) => !v)}>
+                ${listView ? "CARDS" : "LIST"}
               </button>
-              <button className="ctrl-btn" onClick=${mergeDuplicates}>DEDUP</button>
-              <button className="ctrl-btn" onClick=${onImportDemo}>DEMO</button>
+              <div className="tip-wrap">
+                <button className="ctrl-btn" onClick=${pickDirectory}>
+                  ${dirName ? "RE-LINK" : "LINK IMG FOLDER"}
+                </button>
+                ${dirName && html`<span className="tip-box">re-link the profile image folder</span>`}
+              </div>
               <button className="ctrl-btn" onClick=${() => setRestoreOpen(true)}>⇩ RESTORE</button>
               <button className="ctrl-btn" onClick=${handleBackup}>⇧ BACKUP</button>
-              <button className="ctrl-btn primary" onClick=${onNew}>+ NEW</button>
-              <button className="ctrl-btn danger" onClick=${() => setPurgeOpen(true)}>⚠ PURGE</button>
+              <div className="edit-menu-wrap" ref=${editMenuRef}>
+                <button className="ctrl-btn primary" onClick=${() => setEditMenuOpen((v) => !v)}>
+                  EDIT ${editMenuOpen ? "▴" : "▾"}
+                </button>
+                ${editMenuOpen && html`
+                  <div className="edit-dropdown">
+                    <button className="edit-drop-item primary" onClick=${() => { setEditMenuOpen(false); onNew(); }}>+ NEW</button>
+                    <button className="edit-drop-item" onClick=${() => { setEditMenuOpen(false); mergeDuplicates(); }}>DEDUP</button>
+                    <button className="edit-drop-item danger" onClick=${() => { setEditMenuOpen(false); setPurgeOpen(true); }}>⚠ PURGE</button>
+                  </div>
+                `}
+              </div>
             </div>
           </div>
 
@@ -612,25 +639,29 @@ export function App() {
             total=${profiles.length}
           />
 
-          <${Carousel}
-            profiles=${filtered}
-            index=${index}
-            setIndex=${setIndex}
-            onSelect=${onSelect}
-            onNew=${onNew}
-            resolveImg=${combinedResolve}
-          />
-
-          <div className="pager">
-            ${filtered.map((p, i) => html`
-              <span key=${p.id}
-                    className=${"pip " + (i === index ? "on" : "")}
-                    onClick=${() => setIndex(i)} />
-            `)}
-            <span className=${"pip " + (index === filtered.length ? "on" : "")}
-                  onClick=${() => setIndex(filtered.length)}
-                  style=${{ borderLeft: "1px dashed var(--line-2)", marginLeft: 4, paddingLeft: 6 }} />
-          </div>
+          ${listView
+            ? html`<${ProfileList} profiles=${filtered} onSelect=${onSelect} />`
+            : html`
+              <${Carousel}
+                profiles=${filtered}
+                index=${index}
+                setIndex=${setIndex}
+                onSelect=${onSelect}
+                onNew=${onNew}
+                resolveImg=${combinedResolve}
+              />
+              <div className="pager">
+                ${filtered.map((p, i) => html`
+                  <span key=${p.id}
+                        className=${"pip " + (i === index ? "on" : "")}
+                        onClick=${() => setIndex(i)} />
+                `)}
+                <span className=${"pip " + (index === filtered.length ? "on" : "")}
+                      onClick=${() => setIndex(filtered.length)}
+                      style=${{ borderLeft: "1px dashed var(--line-2)", marginLeft: 4, paddingLeft: 6 }} />
+              </div>
+            `
+          }
         </section>
       </div>
 
@@ -690,6 +721,7 @@ export function App() {
           count=${profiles.length}
           onConfirm=${handleRestoreConfirm}
           onClose=${() => setRestoreOpen(false)}
+          onDemo=${async () => { setRestoreOpen(false); await onImportDemo(); }}
         />
       `}
       ${relOpen && html`
