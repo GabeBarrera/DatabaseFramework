@@ -89,3 +89,47 @@
   width: 5px; height: 5px; border-radius: 50%;
   background: currentColor; animation: pulse 1s infinite;
 }
+
+.term-voice-wrap {
+  position: relative;
+}
+.voice-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #020806;
+  border: 1px solid var(--grn-3);
+  z-index: 200;
+  box-shadow: 0 0 12px rgba(0,255,102,0.18);
+}
+.voice-option {
+  padding: 5px 10px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+.voice-option:hover { background: rgba(0,255,102,0.08); color: var(--grn-1); }
+.voice-option.selected { color: var(--grn-0); background: rgba(0,255,102,0.05); }
+.voice-option.dim { color: #2f5b40; cursor: default; }
+.voice-option.dim:hover { background: transparent; color: #2f5b40; }
+.voice-group-label {
+  padding: 5px 10px 2px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  color: var(--grn-3);
+  border-top: 1px dashed var(--line-2);
+  user-select: none;
+}
+.voice-group-label.first { border-top: none; }

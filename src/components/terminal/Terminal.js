@@ -1,6 +1,34 @@
 import { useState, useEffect, useRef } from "react";
 import { html } from "htm/react";
 
+function langLabel(lang) {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(lang) || lang;
+  } catch { return lang; }
+}
+
+function groupVoices(voices) {
+  const usEn = [], otherEn = [], rest = [];
+  voices.forEach(v => {
+    const l = (v.lang || "").toLowerCase().replace("_", "-");
+    if (l === "en-us") usEn.push(v);
+    else if (l.startsWith("en")) otherEn.push(v);
+    else rest.push(v);
+  });
+
+  const byLang = (arr) => {
+    const map = {};
+    arr.forEach(v => { (map[v.lang] = map[v.lang] || []).push(v); });
+    return Object.entries(map).sort(([a], [b]) => langLabel(a).localeCompare(langLabel(b)));
+  };
+
+  const groups = [];
+  if (usEn.length) groups.push({ label: "English (US)", voices: usEn });
+  byLang(otherEn).forEach(([lang, vs]) => groups.push({ label: langLabel(lang), voices: vs }));
+  byLang(rest).forEach(([lang, vs]) => groups.push({ label: langLabel(lang), voices: vs }));
+  return groups;
+}
+
 export function Terminal({ runCommand, banner, fullrail, chatMode }) {
   const [value, setValue] = useState("");
   const [history, setHistory] = useState(banner ? [{ cmd: null, lines: banner }] : []);
@@ -8,18 +36,50 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
   const [histIdx, setHistIdx] = useState(-1);
   const [micOn, setMicOn] = useState(false);
   const [micContinuous, setMicContinuous] = useState(false);
-  const [voiceOn, setVoiceOn] = useState(false);
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(null); // null = off
+  const [voiceDropdownOpen, setVoiceDropdownOpen] = useState(false);
   const inputRef = useRef(null);
   const bodyRef = useRef(null);
   const recognitionRef = useRef(null);
-  const voiceOnRef = useRef(false);
+  const selectedVoiceRef = useRef(null);
   const micOnRef = useRef(false);
   const micContRef = useRef(false);
   const processCmdRef = useRef(null);
+  const voiceWrapRef = useRef(null);
   const PROMPT = chatMode ? "persona@chat:~$" : "persona@root:~$";
 
-  useEffect(() => { voiceOnRef.current = voiceOn; }, [voiceOn]);
+  const voiceOn = selectedVoice !== null;
+
+  useEffect(() => { selectedVoiceRef.current = selectedVoice; }, [selectedVoice]);
   useEffect(() => { micOnRef.current = micOn; }, [micOn]);
+
+  // Load voices — handles deferred loading on iOS/Safari
+  useEffect(() => {
+    if (!window.speechSynthesis) return;
+    function load() {
+      const v = window.speechSynthesis.getVoices();
+      if (v.length) setVoices(v);
+    }
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
+  // Close dropdown on outside click / touch
+  useEffect(() => {
+    if (!voiceDropdownOpen) return;
+    function onOutside(e) {
+      if (voiceWrapRef.current && !voiceWrapRef.current.contains(e.target))
+        setVoiceDropdownOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
+  }, [voiceDropdownOpen]);
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -34,14 +94,16 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
   }, []);
 
   function speakLines(lines) {
-    if (!voiceOnRef.current || !window.speechSynthesis) return;
+    if (!selectedVoiceRef.current || !window.speechSynthesis) return;
     const text = lines
       .map((l) => (typeof l === "string" ? l : l.text || ""))
       .filter(Boolean)
       .join(". ");
     if (!text) return;
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.voice = selectedVoiceRef.current;
+    window.speechSynthesis.speak(utt);
   }
 
   function pushHistory(cmd, lines) {
@@ -125,12 +187,18 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
     } else if (name === "voice") {
       const sub = (rest[0] || "").toLowerCase();
       if (sub === "enable" || sub === "on") {
-        setVoiceOn(true);
-        voiceOnRef.current = true;
-        lines = [{ kind: "acc", text: "voice :: ENABLED — results will be read aloud" }];
+        if (!window.speechSynthesis) {
+          lines = [{ kind: "err", text: "voice :: SpeechSynthesis not supported in this browser" }];
+        } else {
+          const v = window.speechSynthesis.getVoices();
+          const pick = v[0] || null;
+          setSelectedVoice(pick);
+          selectedVoiceRef.current = pick;
+          lines = [{ kind: "acc", text: "voice :: ENABLED" + (pick ? " — " + pick.name : " — use the VOICE button to pick a voice") }];
+        }
       } else if (sub === "disable" || sub === "off") {
-        setVoiceOn(false);
-        voiceOnRef.current = false;
+        setSelectedVoice(null);
+        selectedVoiceRef.current = null;
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         lines = [{ kind: "acc", text: "voice :: DISABLED" }];
       } else {
@@ -240,22 +308,38 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
           ${micOn && html`<span className="term-mic-dot" />`}
           MIC: ${micOn ? (micContinuous ? "LIVE" : "ON") : "OFF"}
         </button>
-        <button
-          className=${"term-tool-btn" + (voiceOn ? " active" : "")}
-          onClick=${() => {
-            if (voiceOn) {
-              setVoiceOn(false);
-              voiceOnRef.current = false;
-              if (window.speechSynthesis) window.speechSynthesis.cancel();
-            } else {
-              setVoiceOn(true);
-              voiceOnRef.current = true;
-            }
-          }}
-          title=${voiceOn ? "Voice output: ON (click to disable)" : "Enable voice output"}
-        >
-          VOICE: ${voiceOn ? "ON" : "OFF"}
-        </button>
+        <div className="term-voice-wrap" ref=${voiceWrapRef}>
+          <button
+            className=${"term-tool-btn" + (voiceOn ? " active" : "")}
+            onClick=${() => setVoiceDropdownOpen((o) => !o)}
+            title="Select voice output"
+          >
+            VOICE: ${voiceOn ? selectedVoice.name.split(/[\s(]/)[0] : "OFF"} ▾
+          </button>
+          ${voiceDropdownOpen && html`
+            <div className="voice-dropdown">
+              <div
+                className=${"voice-option" + (!voiceOn ? " selected" : "")}
+                onMouseDown=${(e) => { e.preventDefault(); setSelectedVoice(null); selectedVoiceRef.current = null; if (window.speechSynthesis) window.speechSynthesis.cancel(); setVoiceDropdownOpen(false); }}
+              >Off</div>
+              ${voices.length === 0
+                ? html`<div className="voice-option dim">loading voices…</div>`
+                : groupVoices(voices).map(({ label, voices: gVoices }, gi) => html`
+                  <div key=${label}>
+                    <div className=${"voice-group-label" + (gi === 0 ? " first" : "")}>${label}</div>
+                    ${gVoices.map((v, i) => html`
+                      <div
+                        key=${i}
+                        className=${"voice-option" + (selectedVoice === v ? " selected" : "")}
+                        onMouseDown=${(e) => { e.preventDefault(); setSelectedVoice(v); selectedVoiceRef.current = v; setVoiceDropdownOpen(false); }}
+                      >${v.name}</div>
+                    `)}
+                  </div>
+                `)
+              }
+            </div>
+          `}
+        </div>
       </div>
       <form className="term-input-row" onSubmit=${submit}>
         <span className="term-pfx">${PROMPT}</span>
