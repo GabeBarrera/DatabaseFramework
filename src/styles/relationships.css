@@ -1,0 +1,76 @@
+.rel-modal {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.97);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  font-family: var(--mono);
+}
+.rel-toolbar {
+  border-bottom: 1px solid var(--line-2);
+  padding: 8px 18px;
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(180deg, #020604, #020604);
+  position: relative; z-index: 2;
+}
+.rel-toolbar-title { font-size: 11px; letter-spacing: 0.3em; color: var(--grn-2); text-transform: uppercase; flex: 1; }
+.rel-toolbar-stats { font-size: 10.5px; color: var(--dim); letter-spacing: 0.16em; display: flex; gap: 16px; }
+.rel-toolbar-stats b { color: var(--grn-0); }
+.rel-body { display: grid; grid-template-columns: 1fr auto; min-height: 0; overflow: hidden; }
+.rel-canvas-wrap {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(1200px 600px at 60% 40%, rgba(0,60,25,0.12), transparent 60%),
+    var(--bg);
+}
+.rel-svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.rel-svg.dragging { cursor: grabbing; }
+.rel-node { cursor: grab; }
+.rel-node:active { cursor: grabbing; }
+.rel-node:hover .node-bg { stroke: var(--grn-0); }
+.rel-hint {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(2,8,5,0.85); border: 1px dashed var(--line-2);
+  padding: 4px 14px; font-size: 10px; letter-spacing: 0.16em;
+  color: var(--dim); text-transform: uppercase; pointer-events: none; white-space: nowrap;
+}
+.rel-zoom-btns { position: absolute; bottom: 42px; right: 18px; display: flex; flex-direction: column; gap: 4px; }
+.rel-zoom-btns button {
+  width: 32px; height: 32px;
+  background: rgba(2,8,5,0.9); border: 1px solid var(--line-2);
+  color: var(--grn-1); font-family: var(--mono); font-size: 18px;
+  line-height: 1; cursor: pointer; transition: all 0.12s;
+}
+.rel-zoom-btns button:hover { background: rgba(0,255,102,0.1); border-color: var(--grn-3); }
+.rel-list {
+  border-left: 1px dashed var(--line-2);
+  width: 222px; display: flex; flex-direction: column;
+  background: var(--bg); min-height: 0;
+  transition: width 0.22s cubic-bezier(.22,.61,.36,1), opacity 0.18s;
+  overflow: hidden;
+}
+.rel-list.collapsed { width: 0; opacity: 0; pointer-events: none; }
+.rel-list-head {
+  padding: 8px 12px 8px 14px; font-size: 10.5px;
+  letter-spacing: 0.2em; color: var(--grn-2); text-transform: uppercase;
+  border-bottom: 1px dashed var(--line-2);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.rel-list-head .bar { flex: 1; border-top: 1px dashed var(--line-2); margin-left: 4px; }
+.rel-list-body { flex: 1; overflow-y: auto; min-height: 0; }
+.rel-list-row {
+  display: grid; grid-template-columns: 22px 1fr 28px;
+  align-items: center; gap: 8px;
+  padding: 6px 10px 6px 10px;
+  border-bottom: 1px dotted var(--line);
+  transition: background 0.1s;
+}
+.rel-list-row:hover { background: rgba(0,255,102,0.05); }
+.rel-list-row.faded { opacity: 0.32; }
+.rel-list-row .rl-init { width: 22px; height: 22px; border: 1px solid var(--line-2); background: #061a10; color: var(--grn-2); display: grid; place-items: center; font-size: 9px; font-weight: 700; }
+.rel-list-row .rl-name { font-size: 11px; color: var(--grn-0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-list-row .rl-id { font-size: 8.5px; color: var(--dim); letter-spacing: 0.1em; }
+.rel-list-row .rl-eye { background: none; border: 1px solid transparent; color: var(--grn-3); font-family: var(--mono); font-size: 13px; cursor: pointer; padding: 1px 3px; line-height: 1; transition: all 0.1s; justify-self: end; }
+.rel-list-row .rl-eye:hover { color: var(--grn-0); border-color: var(--line-2); }
+.rel-list-foot { border-top: 1px dashed var(--line-2); padding: 6px 10px; display: flex; gap: 6px; flex-shrink: 0; }
+.rel-list-foot button { flex: 1; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; background: transparent; border: 1px solid var(--line-2); color: var(--dim); font-family: var(--mono); cursor: pointer; padding: 4px 4px; transition: all 0.12s; }
+.rel-list-foot button:hover { color: var(--grn-0); border-color: var(--grn-3); }

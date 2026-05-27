@@ -1,0 +1,189 @@
+.modal-veil {
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(0,30,15,0.4), rgba(0,0,0,0.85) 70%),
+    rgba(0,0,0,0.6);
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  animation: fadeIn 0.18s ease-out;
+}
+.modal {
+  width: min(960px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background-color: #020604;
+  background:
+    linear-gradient(180deg, rgba(0,30,15,0.5), transparent 12%),
+    #02080500;
+  background-color: #020604;
+  border: 1px solid var(--grn-3);
+  box-shadow:
+    0 0 0 1px rgba(0,255,102,0.15),
+    0 0 80px rgba(0,255,102,0.22),
+    inset 0 0 60px rgba(0,255,102,0.04);
+  position: relative;
+}
+.modal::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, rgba(0,255,102,0.025) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+.modal-head {
+  padding: 14px 18px;
+  border-bottom: 1px dashed var(--line-2);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.modal-head .tag {
+  border: 1px solid var(--grn-3);
+  color: var(--grn-1);
+  padding: 3px 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.modal-head h3 {
+  margin: 0; font-size: 18px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.modal-body {
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+.modal-body .portrait {
+  width: 100%; aspect-ratio: 3/4;
+  border: 1px solid var(--grn-3);
+  background: #050d09;
+  position: relative; overflow: hidden;
+}
+.modal-body .portrait img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: hue-rotate(70deg) saturate(0.7) contrast(1.05) brightness(0.95);
+  mix-blend-mode: screen; background: #0a1f12;
+}
+.modal-body .portrait .ph {
+  width: 100%; height: 100%;
+  display: grid; place-items: center;
+  color: var(--grn-3);
+  background:
+    repeating-linear-gradient(45deg, rgba(0,255,102,0.06) 0 8px, transparent 8px 16px),
+    radial-gradient(circle at 50% 38%, rgba(0,255,102,0.16), transparent 60%),
+    #040c08;
+  font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+  text-align: center; padding: 16px;
+}
+.portrait::after {
+  content: "";
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,102,0.6), transparent);
+  animation: scan 2.2s linear infinite;
+  pointer-events: none;
+}
+.portrait-meta {
+  border: 1px solid var(--line-2); border-top: none;
+  background: #02080500;
+  padding: 10px 12px;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dim);
+  display: flex; justify-content: space-between; gap: 8px;
+}
+.portrait-meta b { color: var(--grn-1); font-weight: 600; }
+
+.deceased-x {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,0.18);
+  z-index: 4; pointer-events: none;
+}
+.deceased-x::before, .deceased-x::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: var(--red); opacity: 0.72;
+  height: 5px; top: 50%; left: 8%; right: 8%; width: 84%;
+  transform-origin: center; border-radius: 2px;
+}
+.deceased-x::before { transform: translateY(-50%) rotate(45deg); }
+.deceased-x::after  { transform: translateY(-50%) rotate(-45deg); }
+
+.classified-tape {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,51,85,0.15) 0 14px, rgba(0,0,0,0) 14px 28px),
+    rgba(0,0,0,0.55);
+  z-index: 3; pointer-events: none;
+}
+.classified-tape .stamp {
+  color: var(--red); font-family: var(--mono); font-weight: 800;
+  letter-spacing: 0.34em; text-transform: uppercase;
+  border: 2px solid var(--red); padding: 6px 16px;
+  transform: rotate(-7deg);
+  background: rgba(20,0,5,0.55);
+  text-shadow: 0 0 8px rgba(255,51,85,0.7), 0 0 22px rgba(255,51,85,0.3);
+  box-shadow: 0 0 14px rgba(255,51,85,0.25), inset 0 0 8px rgba(255,51,85,0.15);
+  font-size: 24px;
+}
+.card .classified-tape .stamp { font-size: 16px; letter-spacing: 0.28em; padding: 4px 10px; }
+
+.refid-link {
+  color: var(--grn-1); cursor: pointer;
+  border-bottom: 1px dashed var(--grn-3);
+  margin-left: 4px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.refid-link:hover { color: var(--amber); border-bottom-color: var(--amber); text-shadow: 0 0 6px rgba(255,203,31,0.45); }
+
+.field-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0; border: 1px solid var(--line-2);
+}
+.field {
+  padding: 10px 12px;
+  border-right: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+  min-width: 0;
+}
+.field:nth-child(2n) { border-right: none; }
+.field.full { grid-column: 1 / -1; border-right: none; }
+.field .k {
+  display: block; color: var(--grn-3);
+  font-size: 10px; letter-spacing: 0.22em;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.field .v { color: var(--grn-0); font-size: 13.5px; word-break: break-word; }
+.field.full .v { font-size: 12.5px; line-height: 1.6; color: var(--txt); }
+
+.addr-link {
+  cursor: pointer; color: var(--grn-0);
+  border-bottom: 1px dashed var(--grn-3);
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s, text-shadow 0.15s;
+  display: inline;
+}
+.addr-link:hover { color: var(--amber); border-bottom-color: var(--amber); text-shadow: 0 0 8px rgba(255,203,31,0.4); }
+.addr-tag {
+  display: inline-block; margin-left: 10px;
+  border: 1px solid var(--grn-3); color: var(--grn-1);
+  padding: 0 5px; font-size: 9.5px; letter-spacing: 0.2em;
+  text-transform: uppercase; transition: all 0.15s; vertical-align: 2px;
+}
+.addr-link:hover .addr-tag { color: #000; background: var(--amber); border-color: var(--amber); }
+
+.modal-foot {
+  padding: 14px 18px;
+  border-top: 1px dashed var(--line-2);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap;
+}
+.foot-hint { color: var(--dim); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; }
+.foot-actions { display: flex; gap: 8px; }
