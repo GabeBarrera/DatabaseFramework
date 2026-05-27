@@ -146,8 +146,9 @@ export function Terminal({ runCommand, banner, fullrail, chatMode }) {
       }
     };
     r.onerror = (e) => {
-      if (e.error !== "no-speech" && e.error !== "aborted")
-        pushHistory(null, [{ kind: "err", text: "mic :: error :: " + e.error }]);
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      pushHistory(null, [{ kind: "err", text: "mic :: error :: " + e.error }]);
+      stopMicListening();
     };
     r.onend = () => { if (micOnRef.current) { try { r.start(); } catch (e) {} } };
     r.start();
