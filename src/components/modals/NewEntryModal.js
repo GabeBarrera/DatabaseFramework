@@ -152,7 +152,7 @@ export function NewEntryModal({ onClose, onSave, initial }) {
       <div className="modal" style=${{ width: "min(920px, 100%)" }}>
         <div className="modal-head">
           <div className="tag">${editing ? "EDIT" : "CREATE"}</div>
-          <h3>&gt; <${Glitch} className="glitch-sm">${editing ? `PATCH_ENTRY :: ${initial.id}` : "NEW_ENTRY.appendix()"}<//>
+          <h3>> <${Glitch} className="glitch-sm">${editing ? `PATCH_ENTRY :: ${initial.id}` : "NEW_ENTRY.appendix()"}<//>
           </h3>
           <div style=${{ display: "flex", gap: 8, alignItems: "center" }}>
             ${importErr && html`<span style=${{ color: "var(--red)", fontSize: 10.5, letterSpacing: "0.16em", textTransform: "uppercase" }}>[ ${importErr} ]</span>`}
@@ -184,27 +184,27 @@ export function NewEntryModal({ onClose, onSave, initial }) {
           <div className="form-rows">
             <div className="row">
               <label>First Name <span className="req">*</span></label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${form.firstName} onChange=${(e) => set("firstName", e.target.value)} autoFocus />
               </div>
               ${errors.firstName && html`<div className="err">[ ${errors.firstName} ]</div>`}
             </div>
             <div className="row">
               <label>Last Name <span className="req">*</span></label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${form.lastName} onChange=${(e) => set("lastName", e.target.value)} />
               </div>
               ${errors.lastName && html`<div className="err">[ ${errors.lastName} ]</div>`}
             </div>
             <div className="row">
               <label>Date of Birth</label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input type="date" value=${form.dob} onChange=${(e) => set("dob", e.target.value)} />
               </div>
             </div>
             <div className="row">
               <label>Sex</label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <select value=${form.sex} onChange=${(e) => set("sex", e.target.value)}>
                   <option value="">[ select ]</option>
                   <option value="M">M / Male</option>
@@ -216,7 +216,7 @@ export function NewEntryModal({ onClose, onSave, initial }) {
             </div>
             <div className="row">
               <label>Status</label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <select value=${form.status} onChange=${(e) => set("status", e.target.value)}>
                   <option value="">[ unknown ]</option>
                   <option value="alive">Alive</option>
@@ -226,32 +226,32 @@ export function NewEntryModal({ onClose, onSave, initial }) {
             </div>
             <div className="row full">
               <label>Ethnicity</label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${form.ethnicity} onChange=${(e) => set("ethnicity", e.target.value)} placeholder="e.g. South Asian, Mixed, Latina" />
               </div>
             </div>
             <div className="row full">
               <label>Address</label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${form.address} onChange=${(e) => set("address", e.target.value)} placeholder="last known location" />
               </div>
             </div>
             <div className="row full">
               <label>Country <span style=${{ color: "var(--dim)", fontSize: 10, letterSpacing: "0.1em" }}>auto-detected from address</span></label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${form.country} onChange=${(e) => set("country", e.target.value)} placeholder="e.g. Germany" />
               </div>
             </div>
             <div className="row full">
               <label>Tags <span style=${{ color: "var(--dim)", fontSize: 10, letterSpacing: "0.1em" }}>comma-separated</span></label>
-              <div className="input-wrap"><span className="pfx">&gt;</span>
+              <div className="input-wrap"><span className="pfx">></span>
                 <input value=${tagsString} onChange=${(e) => setTagsString(e.target.value)} placeholder="e.g. suspect, local, vip" />
               </div>
             </div>
             <div className="row full">
               <label>Description</label>
               <div className="input-wrap" style=${{ alignItems: "flex-start" }}>
-                <span className="pfx">&gt;</span>
+                <span className="pfx">></span>
                 <textarea className="area" value=${form.description} onChange=${(e) => set("description", e.target.value)} placeholder="notes, affiliations, known patterns…" />
               </div>
             </div>
@@ -272,7 +272,7 @@ export function NewEntryModal({ onClose, onSave, initial }) {
                         </select>
                       </div>
                       <div className="input-wrap">
-                        <span className="pfx">&gt;</span>
+                        <span className="pfx">></span>
                         <input
                           value=${c.value}
                           onChange=${(e) => updateContact(i, { value: e.target.value })}
@@ -304,7 +304,7 @@ export function NewEntryModal({ onClose, onSave, initial }) {
                         </select>
                       </div>
                       <div className="input-wrap">
-                        <span className="pfx">&gt;</span>
+                        <span className="pfx">></span>
                         <input
                           value=${r.name}
                           onChange=${(e) => updateRelationship(i, { name: e.target.value })}
@@ -363,7 +363,7 @@ export function NewEntryModal({ onClose, onSave, initial }) {
           </div>
           <div className="foot-actions">
             <button className="ctrl-btn" onClick=${onClose}>cancel</button>
-            <button className="ctrl-btn primary" onClick=${submit}>&gt; ${editing ? "patch_entry()" : "commit_entry()"}</button>
+            <button className="ctrl-btn primary" onClick=${submit}>> ${editing ? "patch_entry()" : "commit_entry()"}</button>
           </div>
         </div>
       </div>

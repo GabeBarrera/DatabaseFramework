@@ -30,7 +30,7 @@ export function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap,
       <div className="modal" role="dialog" aria-modal="true">
         <div className="modal-head">
           <div className="tag">RECORD</div>
-          <h3>&gt; <${Glitch} className="glitch-sm">${profile.firstName.toUpperCase()} ${profile.lastName.toUpperCase()}<//>
+          <h3>> <${Glitch} className="glitch-sm">${profile.firstName.toUpperCase()} ${profile.lastName.toUpperCase()}<//>
           </h3>
           <button className="ctrl-btn" onClick=${onClose}>✕ ESC</button>
         </div>
@@ -208,7 +208,7 @@ export function DetailModal({ profile, onClose, onDelete, resolveImg, onOpenMap,
 
         <div className="modal-foot">
           <div className="foot-hint">
-            <span className="kbd">ESC</span> close &nbsp;·&nbsp; <span className="kbd">←</span><span className="kbd">→</span> navigate &nbsp;·&nbsp; record is read-only
+            <span className="kbd">ESC</span> close · <span className="kbd">←</span><span className="kbd">→</span> navigate · record is read-only
           </div>
           <div className="foot-actions">
             ${onDelete && html`

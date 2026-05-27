@@ -249,7 +249,7 @@ export function MapModal({ profiles, onClose, onSelect, focusId }) {
       <div className="modal map-modal">
         <div className="modal-head">
           <div className="tag">RECON</div>
-          <h3>&gt; <${Glitch} className="glitch-sm">WORLD_MAP // ${pins.length} NODE(S)${unresolved.length ? " · " + unresolved.length + " UNRESOLVED" : ""}<//>
+          <h3>> <${Glitch} className="glitch-sm">WORLD_MAP // ${pins.length} NODE(S)${unresolved.length ? " · " + unresolved.length + " UNRESOLVED" : ""}<//>
           </h3>
           <button className="ctrl-btn" onClick=${onClose}>✕ ESC</button>
         </div>
@@ -331,9 +331,9 @@ export function MapModal({ profiles, onClose, onSelect, focusId }) {
 
         <div className="modal-foot">
           <div className="foot-hint">
-            <span className="kbd">drag</span> pan &nbsp;·&nbsp;
-            <span className="kbd">wheel</span> zoom &nbsp;·&nbsp;
-            <span className="kbd">click</span> popup &nbsp;·&nbsp;
+            <span className="kbd">drag</span> pan ·
+            <span className="kbd">wheel</span> zoom ·
+            <span className="kbd">click</span> popup ·
             <span className="kbd">2x</span> open record
           </div>
           <div className="foot-actions">
@@ -360,7 +360,7 @@ export function MapModal({ profiles, onClose, onSelect, focusId }) {
               disabled=${!active}
               style=${{ opacity: active ? 1 : 0.4 }}
             >
-              &gt; open record
+              > open record
             </button>
           </div>
         </div>

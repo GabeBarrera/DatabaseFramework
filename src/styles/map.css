@@ -191,3 +191,7 @@
 .list-toggle:hover { color: var(--grn-0); }
 .map-list.hidden .lbody { display: none; }
 .map-list.hidden { grid-template-rows: auto; bottom: auto; }
+
+@media (max-width: 640px) {
+  .map-overlay-tl { display: none; }
+}

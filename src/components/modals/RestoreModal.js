@@ -13,7 +13,7 @@ export function RestoreModal({ count, onConfirm, onClose, onDemo }) {
       <div className="modal" style=${{ width: "min(520px, 100%)" }}>
         <div className="modal-head">
           <div className="tag" style=${{ borderColor: "var(--red)", color: "var(--red)" }}>WARN</div>
-          <h3 style=${{ color: "var(--red)" }}>&gt; <span style=${{ letterSpacing: "0.22em" }}>RESTORE :: PURGE EXISTING</span></h3>
+          <h3 style=${{ color: "var(--red)" }}>> <span style=${{ letterSpacing: "0.22em" }}>RESTORE :: PURGE EXISTING</span></h3>
           <button className="ctrl-btn" onClick=${onClose}>✕ ESC</button>
         </div>
 
@@ -26,7 +26,7 @@ export function RestoreModal({ count, onConfirm, onClose, onDemo }) {
             gap: 8,
           }}>
             <div style=${{ color: "var(--red)", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", fontSize: 12 }}>
-              ⚠ &nbsp;WARNING: EXISTING DATA WILL BE PURGED
+              ⚠ WARNING: EXISTING DATA WILL BE PURGED
             </div>
             <div style=${{ color: "var(--txt)", fontSize: 12.5, lineHeight: 1.65 }}>
               This will permanently delete <span style=${{ color: "var(--red)", fontWeight: 700 }}>${count} record${count !== 1 ? "s" : ""}</span> from the database

@@ -160,7 +160,7 @@ export function RelationshipsModal({ profiles, onClose, onSelect }) {
     <div className="rel-modal">
       <div className="rel-toolbar">
         <div className="rel-toolbar-title">
-          // RELATIONSHIPS &gt; <span style=${{ color: "var(--grn-0)" }}>NETWORK_VIEW</span>
+          // RELATIONSHIPS > <span style=${{ color: "var(--grn-0)" }}>NETWORK_VIEW</span>
         </div>
         <div className="rel-toolbar-stats">
           <span>NODES <b>${totalVisible}</b></span>
