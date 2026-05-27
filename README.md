@@ -19,6 +19,7 @@ src/
       Carousel.js       ← swipeable card track
       ProfileCard.js    ← individual profile card
       NewEntryCard.js   ← "+ New Entry" placeholder card
+      ProfileList.js    ← alphabetical list view (alternate to carousel)
     terminal/
       Terminal.js       ← shell + mic/voice I/O
     modals/
@@ -26,11 +27,11 @@ src/
       NewEntryModal.js  ← create / edit form
       MapModal.js       ← Leaflet world map
       PurgeModal.js     ← destructive wipe confirmation
-      RestoreModal.js   ← restore-from-backup confirmation
+      RestoreModal.js   ← restore-from-backup confirmation + demo import
       RelationshipsModal.js ← SVG force-directed relationship graph
   lib/
     storage.js          ← localStorage keys, load/save, registerGeocodeSaver
-    geocode.js          ← Nominatim rate-limited geocoding + cache
+    geocode.js          ← Nominatim geocoding + cache, haversineKm, getUserLocation
     utils.js            ← ageFrom, fmtDate, initials, sexLong, downloadJSON, escapeHTML
     graph.js            ← buildRelGraph, forceLayout (custom physics)
     chat.js             ← natural-language chat interpreter
@@ -43,14 +44,14 @@ src/
   styles/
     base.css            ← :root variables, reset, scrollbars, toast, kbd
     animations.css      ← @keyframes
-    layout.css          ← shell, topbar, leftrail, stage, statusbar
-    card.css            ← carousel, cards, pager
+    layout.css          ← shell, topbar, leftrail, stage, statusbar, dropdowns
+    card.css            ← carousel, cards, pager, profile list
     modal.css           ← modals, portrait, field-grid, contacts-list
     terminal.css        ← terminal, mic/voice toolbar
     form.css            ← create/edit form grid
     map.css             ← Leaflet overrides, cyber-pin, map-list
     relationships.css   ← SVG graph layout
-demo.json               ← 8 example personas (loaded by DEMO button)
+demo.json               ← 8 example personas
 ```
 
 ## Running
@@ -59,7 +60,7 @@ Open `index.html` in any modern browser — no server required for local use.
 
 For GitHub Pages or any static host, push the repo root as-is. The importmap fetches React and htm from `esm.sh` on first load.
 
-> **HTTPS required for mic/voice features** (Web Speech API restriction). `localhost` also works.
+> **HTTPS required for mic/voice and geolocation features** (browser security restriction). `localhost` also works.
 
 ## Features
 
@@ -70,7 +71,7 @@ For GitHub Pages or any static host, push the repo root as-is. The importmap fet
 - **Status**: marks a profile as `Alive` or `Deceased`. Color-coded on the card and in the detail modal.
 - **Contacts**: email, phone, Signal, Telegram, Discord, X, Instagram, GitHub, LinkedIn, IRC, Keybase, Matrix, Session, XMPP, website, and other.
 - **Relationships**: link profiles with a labeled type (friend, spouse, colleague, rival, etc.).
-- **POI flag**: Person of Interest — POI entries sort to the top of the carousel alphabetically.
+- **POI flag**: Person of Interest — POI entries sort to the top of the carousel and list view, alphabetically.
 - **Hidden flag**: exclude a profile from map geocoding and the relationship graph.
 - **Classified flag**: hide behind a terminal PIN (`classified enable` command).
 
@@ -79,8 +80,14 @@ For GitHub Pages or any static host, push the repo root as-is. The importmap fet
 - Center card is active; adjacent cards are scaled and dimmed.
 - Click a card to open its full detail modal.
 
+### List View
+- Toggle between the carousel and a compact alphabetical list using the **LIST / CARDS** button in the toolbar.
+- POIs appear first (alphabetically), followed by all other profiles (also alphabetically by last name, then first name).
+- Columns: Name, Ref ID, DOB / Age, Sex, Ethnicity, Status, Address.
+- No images — focused on data at a glance. Click any row to open the detail modal.
+
 ### Search & Filter
-- Real-time filter above the carousel. Scope to any field via the chip bar.
+- Real-time filter above the carousel/list. Scope to any field via the chip bar.
 
 ### Detail Modal
 - All fields, clickable contact links, relationship links.
@@ -93,8 +100,21 @@ For GitHub Pages or any static host, push the repo root as-is. The importmap fet
 - Geocoding via **Nominatim** (1 req/sec, cached in `localStorage`).
 - Dark tiles (CARTO), cyber-styled pins, crosshair on active pin.
 
+### Proximity Features
+- **`distance <name|id>`** terminal command: uses the browser Geolocation API to compute the straight-line distance (km and miles) from your current location to a profile's address.
+- **Chat nearest-profile query**: phrases like `"who is closest to me"`, `"identify the closest person"`, or `"which profile is nearby"` geocode all profiles and return the nearest one with distance.
+
+### Toolbar
+- **MAP** / **RELATIONSHIPS** / **LIST** — primary navigation buttons (orange accent).
+- **RE-LINK** — re-link the profile image folder (hover for tooltip). Shows as **LINK IMG FOLDER** when no folder is linked yet.
+- **⇩ RESTORE** / **⇧ BACKUP** — JSON import/export.
+- **EDIT ▾** — dropdown menu containing:
+  - **+ NEW** — open the create-profile form
+  - **DEDUP** — merge profiles with matching IDs or first+last+DOB
+  - **⚠ PURGE** — wipe all records (opens confirmation modal)
+
 ### Terminal / Shell
-Commands: `list`/`ls`, `find`/`grep <query>`, `goto`, `open`, `download`, `map`, `new`, `link`, `count`, `scope`, `clear-filter`, `date`, `version`, `echo`, `clear`, `save`, `purge`, `chat`, `help`.
+Commands: `list`/`ls`, `find`/`grep <query>`, `goto`, `open`, `download`, `distance`, `map`, `new`, `link`, `count`, `scope`, `clear-filter`, `date`, `version`, `echo`, `clear`, `save`, `purge`, `chat`, `help`.
 
 **Audio I/O (HTTPS required):**
 - `mic enable` — keyword mode: say **"Command \<cmd\>"** to execute
@@ -104,12 +124,25 @@ Commands: `list`/`ls`, `find`/`grep <query>`, `goto`, `open`, `download`, `map`,
 
 **Chat mode** (`chat`): natural-language queries and edits. Type `exit` to return to shell.
 
+Example chat queries:
+```
+who is closest to me
+identify the nearest profile
+how many profiles are there
+who has a birthday in march
+who is older than 40
+who lives in berlin
+who is related to john
+tell me about jane smith
+set jane's address to 123 main st
+delete relationship between alice and bob
+```
+
 ### Data Persistence
 - Profiles stored in `localStorage` (`personaDB::v3`).
 - Geocode cache stored separately (`personaDB::geocode::v2`).
-- **DEMO** button fetches `demo.json` and merges the 8 example personas (skips duplicates by ID).
+- **DEMO** — loads the 8 example personas from `demo.json` (skips duplicates by ID). Accessed via the **⇩ RESTORE** modal.
 - **⇧ BACKUP** / **⇩ RESTORE** for JSON export/import.
-- **DEDUP** merges profiles with matching IDs or first+last+DOB.
 
 ## Stack
 
